@@ -371,6 +371,42 @@ SC.App = (function () {
       SC.Storage.wipe();
       logout();
     };
+
+    $("btn-copy-gas-code").onclick = copyGasCode;
+  }
+
+  const GAS_CODE_URL =
+    "https://raw.githubusercontent.com/dn-scribe/sefaria-commentary/main/gas/Code.gs";
+
+  async function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    // Fallback for older browsers / non-secure contexts.
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+  }
+
+  async function copyGasCode() {
+    const status = $("copy-gas-status");
+    status.textContent = "מוריד את הקוד...";
+    try {
+      const res = await fetch(GAS_CODE_URL);
+      if (!res.ok) throw new Error("שגיאה בהורדת הקוד");
+      const code = await res.text();
+      await copyToClipboard(code);
+      status.textContent = "✅ הקוד הועתק ללוח - הדביקו אותו בעורך ה-Apps Script";
+    } catch (err) {
+      status.textContent = "❌ ההעתקה נכשלה - השתמשו בקישור 'צפו בקובץ' והעתיקו משם ידנית";
+    }
   }
 
   function initHeader() {
