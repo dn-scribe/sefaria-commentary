@@ -62,6 +62,18 @@
         </label>
       </form>
       <ul id="book-search-results" class="result-list"></ul>
+
+      <details class="scope-add">
+        <summary>הוספת טווח מדויק (פרק/חלק ספציפי בתוך ספר)</summary>
+        <form id="form-add-scope" autocomplete="off">
+          <label>
+            הפניה מדויקת מספריא
+            <input type="text" id="input-scope-search" placeholder="לדוגמה: Likutei Moharan 56" />
+          </label>
+          <button type="submit" class="secondary">הוספה</button>
+        </form>
+        <p class="muted">כתבו הפניה בפורמט של ספריא (שם הספר באנגלית, ואז מספר פרק/חלק). הדפדוף (הבא/הקודם) והייצוא למסמך יישארו בתוך הטווח הזה בלבד - זה נוסף לרשימה כספר עצמאי משלו.</p>
+      </details>
     </div>
 
     <ul id="book-list" class="book-list"></ul>

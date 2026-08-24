@@ -43,6 +43,10 @@ SC.Api = (function () {
       ref: json.ref,
       heRef: json.heRef || json.ref,
       sectionRef: json.sectionRef || json.ref,
+      // For a container-level ref (e.g. a whole Part) this drills down to
+      // the first actual page to display; for an already-leaf ref it's
+      // effectively the same ref (or one level more specific).
+      firstAvailableSectionRef: json.firstAvailableSectionRef || json.sectionRef || json.ref,
       next: json.next || null,
       prev: json.prev || null,
       he: normalizeLines(json.he),

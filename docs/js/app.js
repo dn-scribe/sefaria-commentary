@@ -93,6 +93,11 @@ SC.App = (function () {
         }
       }, 300);
     });
+
+    $("form-add-scope").onsubmit = (e) => {
+      e.preventDefault();
+      addScopedBook($("input-scope-search").value);
+    };
   }
 
   async function addBook(title) {
@@ -106,6 +111,8 @@ SC.App = (function () {
         id: uid(),
         title: idx.title,
         heTitle: idx.heTitle,
+        scopeRef: null,
+        scopeHeRef: null,
         currentRef: idx.firstRef,
         lastRef: null,
         sheetId: null,
@@ -126,6 +133,52 @@ SC.App = (function () {
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בהוספת הספר", true);
     }
+  }
+
+  // A scoped book pins navigation and export to one sub-part of a book
+  // (e.g. a single chapter or Part), instead of the whole thing.
+  async function addScopedBook(query) {
+    query = query.trim();
+    if (!query) return;
+    try {
+      const section = await SC.Api.getSection(query);
+      if (state.books.some((b) => b.scopeRef === section.ref)) {
+        SC.UI.toast("הטווח הזה כבר ברשימה");
+        return;
+      }
+      const idx = await SC.Api.getIndex(section.book);
+      const book = {
+        id: uid(),
+        title: idx.title,
+        heTitle: idx.heTitle,
+        scopeRef: section.ref,
+        scopeHeRef: section.heRef,
+        currentRef: section.firstAvailableSectionRef,
+        lastRef: null,
+        sheetId: null,
+        sheetUrl: null,
+        docId: null,
+        docUrl: null,
+        exportedRefs: [],
+        lastExportedAt: null,
+        createdAt: Date.now(),
+      };
+      state.books.push(book);
+      state.commentary[book.id] = {};
+      await persist();
+      $("input-scope-search").value = "";
+      await goToBooks();
+      SC.UI.toast(`נוסף: ${book.heTitle} — ${book.scopeHeRef}`);
+    } catch (err) {
+      SC.UI.toast(err.message || "לא ניתן לפענח את ההפניה הזו בספריא", true);
+    }
+  }
+
+  // Prefix match on a canonical ref, requiring a word boundary (":" or " ")
+  // so "Likutei Moharan 5" never matches "Likutei Moharan 56".
+  function isWithinScope(ref, scopeRef) {
+    if (!scopeRef) return true;
+    return ref === scopeRef || ref.startsWith(scopeRef + ":") || ref.startsWith(scopeRef + " ");
   }
 
   async function deleteBook(book) {
@@ -162,13 +215,21 @@ SC.App = (function () {
 
   function renderCurrentSection() {
     SC.UI.renderReader(currentBook, currentSection, state.commentary[currentBook.id] || {});
+    if (currentBook.scopeRef) {
+      if (currentSection.next && !isWithinScope(currentSection.next, currentBook.scopeRef)) {
+        $("btn-next-section").disabled = true;
+      }
+      if (currentSection.prev && !isWithinScope(currentSection.prev, currentBook.scopeRef)) {
+        $("btn-prev-section").disabled = true;
+      }
+    }
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
   }
 
   async function goSection(direction) {
     const ref = direction === "next" ? currentSection.next : currentSection.prev;
-    if (!ref) return;
+    if (!ref || !isWithinScope(ref, currentBook.scopeRef)) return;
     try {
       const section = await SC.Api.getSection(ref);
       if (direction === "next") {
@@ -282,7 +343,9 @@ SC.App = (function () {
     return {
       id: book.id,
       title: book.title,
-      heTitle: book.heTitle,
+      // Fold the scope into the name so two scoped entries from the same
+      // parent book (e.g. two different chapters) don't collide in Drive.
+      heTitle: book.scopeHeRef ? `${book.heTitle} - ${book.scopeHeRef}` : book.heTitle,
       sheetId: book.sheetId,
       docId: book.docId,
     };
