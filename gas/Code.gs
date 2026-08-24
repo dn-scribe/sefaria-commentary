@@ -70,6 +70,24 @@ function getOrCreateDoc(book) {
   return DocumentApp.create((book.heTitle || book.title) + " - פרשנות");
 }
 
+function sefariaUrl(ref) {
+  return "https://www.sefaria.org/" + String(ref || "").replace(/ /g, "_");
+}
+
+/** Appends a paragraph and right-aligns it (RTL content, LTR-default Docs). */
+function appendRightParagraph(body, text) {
+  var p = body.appendParagraph(text);
+  p.setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  return p;
+}
+
+/** Appends a right-aligned paragraph whose text is a clickable link to Sefaria. */
+function appendSefariaLink(body, ref) {
+  var p = appendRightParagraph(body, ref);
+  p.editAsText().setLinkUrl(0, ref.length - 1, sefariaUrl(ref)).setUnderline(true).setForegroundColor("#1155cc");
+  return p;
+}
+
 /** Sheet always mirrors the full current commentary set for the book. */
 function handleSync(payload) {
   var book = payload.book;
@@ -106,26 +124,32 @@ function handleExport(payload) {
 
   if (mode === "replace" && body.getText().trim() !== "") {
     body.appendPageBreak();
-    body
-      .appendParagraph("--- גרסה חדשה מתאריך " + new Date().toLocaleString() + " ---")
-      .setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    appendRightParagraph(body, "--- גרסה חדשה מתאריך " + new Date().toLocaleString() + " ---").setHeading(
+      DocumentApp.ParagraphHeading.HEADING2
+    );
   } else if (body.getText().trim() === "") {
-    body.appendParagraph((book.heTitle || book.title) + " - פרשנות").setHeading(
+    appendRightParagraph(body, (book.heTitle || book.title) + " - פרשנות").setHeading(
       DocumentApp.ParagraphHeading.TITLE
     );
   }
 
   entries.forEach(function (entry) {
-    if (entry.heText) {
-      body.appendParagraph(entry.ref + "  " + entry.heText).setHeading(DocumentApp.ParagraphHeading.HEADING4);
-    }
+    // Title on top (optional section heading), then the source text, then a
+    // link back to Sefaria instead of a plain ref prefix, then the comment
+    // at the bottom.
     if (entry.title) {
-      body.appendParagraph(entry.title).setBold(true);
+      appendRightParagraph(body, entry.title).setBold(true).setHeading(DocumentApp.ParagraphHeading.HEADING4);
+    }
+    if (entry.heText) {
+      appendRightParagraph(body, entry.heText);
+    }
+    if (entry.ref) {
+      appendSefariaLink(body, entry.ref);
     }
     if (entry.text) {
-      body.appendParagraph(entry.text);
+      appendRightParagraph(body, entry.text);
     }
-    body.appendParagraph("");
+    appendRightParagraph(body, "");
   });
   doc.saveAndClose();
 
