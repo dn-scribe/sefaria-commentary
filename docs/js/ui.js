@@ -98,36 +98,37 @@ SC.UI = (function () {
     lines.forEach((line, i) => {
       const ref = commentaryRefFor(section.sectionRef, i);
       const existing = commentaryMap[ref];
-      const row = document.createElement("div");
+      const row = document.createElement("form");
       row.className = "verse-row";
       row.dataset.ref = ref;
       row.innerHTML = `
+        <div class="verse-title-row">
+          <div class="title-view" ${existing?.title ? "" : "hidden"}>
+            <strong>${escapeHtml(existing?.title || "")}</strong>
+            <button type="button" class="link-btn btn-edit-title">עריכה</button>
+          </div>
+          <button type="button" class="link-btn btn-add-title" ${existing?.title ? "hidden" : ""}>+ הוספת כותרת</button>
+          <input type="text" class="commentary-title-input" placeholder="כותרת הקטע" value="${escapeAttr(existing?.title || "")}" hidden />
+        </div>
         <div class="verse-text">
           <span class="verse-num">${i + 1}</span>
           <span class="verse-he">${escapeHtml(stripTags(line))}</span>
           ${enLines[i] ? `<span class="verse-en muted">${escapeHtml(stripTags(enLines[i]))}</span>` : ""}
         </div>
-        <div class="verse-commentary">
-          ${
-            existing
-              ? `<div class="commentary-view">
-                   <strong>${escapeHtml(existing.title || "")}</strong>
-                   <div class="commentary-text">${linkify(escapeHtml(existing.text || ""))}</div>
-                   <div class="commentary-actions">
-                     <button class="link-btn btn-edit-comment">עריכה</button>
-                     <button class="link-btn btn-delete-comment">מחיקה</button>
-                   </div>
-                 </div>`
-              : `<button class="link-btn btn-add-comment">+ הוספת פרשנות</button>`
-          }
-          <form class="commentary-form" hidden>
-            <input type="text" class="commentary-title-input" placeholder="כותרת (אופציונלי)" value="${escapeAttr(existing?.title || "")}" />
-            <textarea class="commentary-text-input" placeholder="כתבו את הפרשנות כאן..." rows="3">${existing?.text || ""}</textarea>
-            <div class="row-actions">
-              <button type="submit" class="primary">שמירה</button>
-              <button type="button" class="secondary btn-cancel-comment">ביטול</button>
+        <div class="verse-commentary-row">
+          <div class="commentary-view" ${existing?.text ? "" : "hidden"}>
+            <div class="commentary-text">${linkify(escapeHtml(existing?.text || ""))}</div>
+            <div class="commentary-actions">
+              <button type="button" class="link-btn btn-edit-comment">עריכה</button>
+              <button type="button" class="link-btn btn-delete-comment">מחיקה</button>
             </div>
-          </form>
+          </div>
+          <button type="button" class="link-btn btn-add-comment" ${existing?.text ? "hidden" : ""}>+ הוספת פרשנות</button>
+          <textarea class="commentary-text-input" placeholder="כתבו את הפרשנות כאן..." rows="3" hidden>${existing?.text || ""}</textarea>
+          <div class="row-actions commentary-save-actions" hidden>
+            <button type="submit" class="primary">שמירה</button>
+            <button type="button" class="secondary btn-cancel-comment">ביטול</button>
+          </div>
         </div>`;
       container.appendChild(row);
     });
