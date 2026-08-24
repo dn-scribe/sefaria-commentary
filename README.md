@@ -69,8 +69,8 @@ Your app will be available at: `https://dn-scribe.github.io/sefaria-commentary/`
 
 To enable Google Docs/Sheets export:
 
-1. Create a Google Apps Script project
-2. Deploy as a web app
+1. Create a Google Apps Script project at [script.google.com](https://script.google.com/) and paste in the contents of [`gas/Code.gs`](gas/Code.gs)
+2. Deploy as a web app (Execute as: Me, Access: Only myself)
 3. Copy the deployment URL into the app settings
 4. Grant necessary permissions to access your Drive
 

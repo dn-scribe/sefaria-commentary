@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>פרשנות ספריא - Sefaria Commentary</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="app-header" id="app-header" hidden>
+  <h1 class="app-title">📖 פרשנות</h1>
+  <nav class="header-actions">
+    <button id="btn-nav-books" class="icon-btn" title="רשימת ספרים">📚</button>
+    <button id="btn-nav-settings" class="icon-btn" title="הגדרות">⚙️</button>
+    <button id="btn-logout" class="icon-btn" title="נעילה">🔒</button>
+  </nav>
+</header>
+
+<main id="app-main">
+
+  <!-- AUTH SCREEN -->
+  <section id="screen-auth" class="screen">
+    <div class="card centered">
+      <h2 id="auth-title">ברוכים הבאים</h2>
+      <p id="auth-subtitle" class="muted"></p>
+      <form id="form-auth">
+        <label>
+          סיסמה
+          <input type="password" id="input-passphrase" required minlength="4" autocomplete="current-password" />
+        </label>
+        <label id="label-confirm" hidden>
+          אימות סיסמה
+          <input type="password" id="input-passphrase-confirm" autocomplete="new-password" />
+        </label>
+        <button type="submit" class="primary">המשך</button>
+      </form>
+      <p id="auth-error" class="error" hidden></p>
+    </div>
+  </section>
+
+  <!-- BOOK LIST SCREEN -->
+  <section id="screen-books" class="screen">
+    <div class="screen-head">
+      <h2>הספרים שלי</h2>
+    </div>
+
+    <div id="empty-state" class="card" hidden>
+      <p>👋 עדיין אין ספרים ברשימה.</p>
+      <ol>
+        <li>חפשו ספר מספריא בתיבת החיפוש למטה והוסיפו אותו.</li>
+        <li>פתחו את הספר כדי להתחיל לכתוב פרשנות.</li>
+        <li>אופציונלי: חברו את החשבון ל-Google ב<a href="#" id="link-to-settings">הגדרות</a> כדי לייצא ל-Docs/Sheets.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <form id="form-add-book" autocomplete="off">
+        <label>
+          הוספת ספר מספריא
+          <input type="text" id="input-book-search" placeholder="לדוגמה: בראשית" />
+        </label>
+      </form>
+      <ul id="book-search-results" class="result-list"></ul>
+    </div>
+
+    <ul id="book-list" class="book-list"></ul>
+  </section>
+
+  <!-- READER SCREEN -->
+  <section id="screen-reader" class="screen">
+    <div class="screen-head">
+      <button id="btn-back-to-books" class="icon-btn" title="חזרה לרשימת הספרים">→</button>
+      <div>
+        <h2 id="reader-book-title"></h2>
+        <p id="reader-section-title" class="muted"></p>
+      </div>
+      <button id="btn-open-sefaria" class="secondary" title="פתיחה בספריא בכרטיסייה חדשה">ספריא ↗</button>
+    </div>
+
+    <div id="reader-content" class="reader-content"></div>
+
+    <div class="reader-nav">
+      <button id="btn-prev-section" class="secondary">← הקודם</button>
+      <button id="btn-next-section" class="secondary">הבא →</button>
+    </div>
+
+    <div class="card export-card">
+      <h3>ייצוא ל-Google Docs</h3>
+      <div class="export-actions">
+        <button id="btn-export-update" class="secondary">עדכון (חדשים בלבד)</button>
+        <button id="btn-export-replace" class="secondary">ייצוא גרסה מלאה חדשה</button>
+        <a id="link-open-doc" href="#" target="_blank" rel="noopener" hidden>פתיחת המסמך ↗</a>
+      </div>
+      <p id="export-status" class="muted"></p>
+    </div>
+  </section>
+
+  <!-- SETTINGS SCREEN -->
+  <section id="screen-settings" class="screen">
+    <div class="screen-head">
+      <button id="btn-back-from-settings" class="icon-btn" title="חזרה">→</button>
+      <h2>הגדרות</h2>
+    </div>
+    <div class="card">
+      <form id="form-settings">
+        <label>
+          כתובת URL של Google Apps Script (אופציונלי)
+          <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec" />
+        </label>
+        <div class="row-actions">
+          <button type="submit" class="primary">שמירה</button>
+          <button type="button" id="btn-test-gas" class="secondary">בדיקת חיבור</button>
+        </div>
+      </form>
+      <p id="settings-status" class="muted"></p>
+    </div>
+    <div class="card">
+      <h3>אזור מסוכן</h3>
+      <button id="btn-wipe" class="danger">מחיקת כל הנתונים המקומיים</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
