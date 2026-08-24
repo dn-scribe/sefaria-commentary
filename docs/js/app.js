@@ -98,6 +98,59 @@ SC.App = (function () {
       e.preventDefault();
       addScopedBook($("input-scope-search").value);
     };
+
+    initScopeChapterPicker();
+  }
+
+  let scopeSearchDebounce = null;
+  let scopePickedBook = null;
+  function initScopeChapterPicker() {
+    $("form-scope-book-search").onsubmit = (e) => e.preventDefault();
+    $("input-scope-book-search").addEventListener("input", (e) => {
+      clearTimeout(scopeSearchDebounce);
+      const q = e.target.value;
+      $("scope-chapter-picker").hidden = true;
+      scopeSearchDebounce = setTimeout(async () => {
+        if (q.trim().length < 2) {
+          SC.UI.renderSearchResults([], () => {}, "scope-book-results");
+          return;
+        }
+        try {
+          const results = await SC.Api.searchTitles(q);
+          SC.UI.renderSearchResults(results, pickScopeBook, "scope-book-results");
+        } catch (err) {
+          console.error(err);
+        }
+      }, 300);
+    });
+
+    $("btn-add-scope-chapter").onclick = () => {
+      if (!scopePickedBook) return;
+      const chapter = $("input-scope-chapter").value;
+      addScopedBook(`${scopePickedBook.title} ${chapter}`);
+    };
+  }
+
+  async function pickScopeBook(title) {
+    try {
+      const idx = await SC.Api.getIndex(title);
+      const shape = await SC.Api.getShape(idx.title);
+      scopePickedBook = idx;
+      $("scope-picked-book-name").textContent = idx.heTitle;
+      const select = $("input-scope-chapter");
+      select.innerHTML = "";
+      for (let i = 1; i <= shape.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = i;
+        select.appendChild(opt);
+      }
+      $("scope-chapter-picker").hidden = false;
+      $("input-scope-book-search").value = "";
+      SC.UI.renderSearchResults([], () => {}, "scope-book-results");
+    } catch (err) {
+      SC.UI.toast(err.message || "שגיאה בטעינת מבנה הספר", true);
+    }
   }
 
   async function addBook(title) {

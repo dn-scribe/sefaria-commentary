@@ -64,6 +64,19 @@ SC.Api = (function () {
     return [value];
   }
 
+  // Chapter counts for building a chapter picker, e.g. [{length: 50, chapters: [31, 25, ...]}].
+  // Only covers the book's default addressing node - multi-part texts with
+  // alt-structures (e.g. a Likutei Moharan "Part II") need their own query
+  // by that part's own ref (which this same endpoint also accepts).
+  async function getShape(title) {
+    const res = await fetch(`${BASE}/api/shape/${encodeURIComponent(title)}`);
+    if (!res.ok) throw new Error("שגיאה בטעינת מבנה הפרקים");
+    const json = await res.json();
+    const item = Array.isArray(json) ? json[0] : json;
+    if (!item || !item.length) throw new Error("לא נמצא מבנה פרקים לספר זה");
+    return { length: item.length };
+  }
+
   function sefariaUrl(ref) {
     return `${BASE}/${ref.replace(/ /g, "_")}`;
   }
@@ -82,5 +95,5 @@ SC.Api = (function () {
     return json;
   }
 
-  return { searchTitles, getIndex, getSection, sefariaUrl, callGas };
+  return { searchTitles, getIndex, getSection, getShape, sefariaUrl, callGas };
 })();

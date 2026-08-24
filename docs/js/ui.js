@@ -42,8 +42,8 @@ SC.UI = (function () {
     el.hidden = false;
   }
 
-  function renderSearchResults(items, onSelect) {
-    const ul = $("book-search-results");
+  function renderSearchResults(items, onSelect, targetId) {
+    const ul = $(targetId || "book-search-results");
     ul.innerHTML = "";
     items.forEach((item) => {
       const title = item.split("|")[0] || item;
