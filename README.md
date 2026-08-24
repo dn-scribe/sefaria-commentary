@@ -78,7 +78,7 @@ To enable it:
 1. Go to [script.google.com](https://script.google.com/) → New project
 2. Delete the placeholder code and paste in the full contents of [`gas/Code.gs`](gas/Code.gs)
 3. Click **Deploy → New deployment**, select type **Web app**
-4. Set "Execute as": **Me**, "Who has access": **Only myself**, then click **Deploy**
+4. Set "Execute as": **Me**, "Who has access": **Anyone** (this does *not* make your data public - the code still only ever runs as you, and the deployment URL is an unguessable secret token that only you have; "Only myself" would instead reject every request, since a browser `fetch()` has no way to prove it's you)
 5. Google will show a one-time authorization prompt (access to your Sheets/Docs/Drive) — click through it. This does not require creating anything in Google Cloud Console; it's the standard Apps Script consent screen.
 6. Copy the resulting Web App URL (ends in `/exec`)
 7. In the app, open **Settings** (⚙️), paste the URL into "Google Apps Script URL", click **שמירה** (Save), then **בדיקת חיבור** (Test Connection) to confirm it responds

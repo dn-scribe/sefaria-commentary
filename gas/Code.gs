@@ -4,7 +4,10 @@
  * Deploy:
  *   1. https://script.google.com/ -> New project, paste this file in as Code.gs.
  *   2. Deploy -> New deployment -> type "Web app".
- *   3. Execute as: Me. Who has access: Only myself.
+ *   3. Execute as: Me. Who has access: Anyone (NOT "Only myself" - that
+ *      rejects every request with 401, since a browser fetch() has no way
+ *      to prove it's you; the code still only ever runs as you either way,
+ *      and the deployment URL is an unguessable secret token).
  *   4. Deploy, authorize the requested Drive/Docs/Sheets scopes.
  *   5. Copy the web app URL into the app's Settings screen.
  *

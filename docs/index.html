@@ -107,7 +107,7 @@
       <h3>חיבור ל-Google Sheets/Docs</h3>
       <ol class="setup-steps">
         <li>ב-<a href="https://script.google.com/" target="_blank" rel="noopener">script.google.com</a> צרו פרויקט חדש והדביקו לתוכו את <code>gas/Code.gs</code> מהריפו</li>
-        <li>Deploy ← New deployment ← Web app. הגדירו Execute as: Me, Who has access: Only myself</li>
+        <li>Deploy ← New deployment ← Web app. הגדירו Execute as: Me, Who has access: <strong>Anyone</strong> (לא Only myself - אחרת כל בקשה תיחסם ב-401, כי לדפדפן אין דרך להוכיח מיהו. הקוד עדיין רץ תמיד רק כמוכם, וכתובת ה-URL היא סוד שרק לכם יש)</li>
         <li>אשרו את מסך ההרשאות החד-פעמי (Sheets/Docs/Drive) ופרסמו</li>
         <li>הדביקו כאן את כתובת ה-URL שמסתיימת ב-<code>/exec</code> ולחצו שמירה, ואז בדיקת חיבור</li>
       </ol>
