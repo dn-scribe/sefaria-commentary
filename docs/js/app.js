@@ -240,18 +240,20 @@ SC.App = (function () {
   // ---------- Google sync / export ----------
   function syncToSheet() {
     if (!state.settings.gasUrl) return;
-    const entries = sortedEntries(currentBook.id);
+    const book = currentBook;
+    const entries = sortedEntries(book.id);
     SC.Api
       .callGas(state.settings.gasUrl, {
         action: "sync",
-        book: bookRef(currentBook),
+        book: bookRef(book),
         entries,
       })
       .then((res) => {
-        if (res.sheetId && !currentBook.sheetId) {
-          currentBook.sheetId = res.sheetId;
-          currentBook.sheetUrl = res.sheetUrl;
+        if (res.sheetId && !book.sheetId) {
+          book.sheetId = res.sheetId;
+          book.sheetUrl = res.sheetUrl;
           persist();
+          if (currentBook === book) updateExportLink();
         }
       })
       .catch((err) => console.warn("Sheet sync failed", err));
@@ -268,12 +270,19 @@ SC.App = (function () {
   }
 
   function updateExportLink() {
-    const link = $("link-open-doc");
+    const docLink = $("link-open-doc");
     if (currentBook.docUrl) {
-      link.href = currentBook.docUrl;
-      link.hidden = false;
+      docLink.href = currentBook.docUrl;
+      docLink.hidden = false;
     } else {
-      link.hidden = true;
+      docLink.hidden = true;
+    }
+    const sheetLink = $("link-open-sheet");
+    if (currentBook.sheetUrl) {
+      sheetLink.href = currentBook.sheetUrl;
+      sheetLink.hidden = false;
+    } else {
+      sheetLink.hidden = true;
     }
     $("export-status").textContent = currentBook.lastExportedAt
       ? "יוצא לאחרונה: " + new Date(currentBook.lastExportedAt).toLocaleString("he-IL")

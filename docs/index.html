@@ -91,6 +91,7 @@
         <button id="btn-export-update" class="secondary">עדכון (חדשים בלבד)</button>
         <button id="btn-export-replace" class="secondary">ייצוא גרסה מלאה חדשה</button>
         <a id="link-open-doc" href="#" target="_blank" rel="noopener" hidden>פתיחת המסמך ↗</a>
+        <a id="link-open-sheet" href="#" target="_blank" rel="noopener" hidden>פתיחת הגיליון ↗</a>
       </div>
       <p id="export-status" class="muted"></p>
     </div>
@@ -103,6 +104,14 @@
       <h2>הגדרות</h2>
     </div>
     <div class="card">
+      <h3>חיבור ל-Google Sheets/Docs</h3>
+      <ol class="setup-steps">
+        <li>ב-<a href="https://script.google.com/" target="_blank" rel="noopener">script.google.com</a> צרו פרויקט חדש והדביקו לתוכו את <code>gas/Code.gs</code> מהריפו</li>
+        <li>Deploy ← New deployment ← Web app. הגדירו Execute as: Me, Who has access: Only myself</li>
+        <li>אשרו את מסך ההרשאות החד-פעמי (Sheets/Docs/Drive) ופרסמו</li>
+        <li>הדביקו כאן את כתובת ה-URL שמסתיימת ב-<code>/exec</code> ולחצו שמירה, ואז בדיקת חיבור</li>
+      </ol>
+      <p class="muted">אין צורך לחבר גיליון או מסמך לכל ספר בנפרד - זו פעולה חד-פעמית וגלובלית. לכל ספר ייווצרו אוטומטית גיליון ומסמך משלו בפעם הראשונה שתשמרו או תייצאו עבורו פרשנות, והקישורים אליהם יופיעו במסך הקריאה של אותו ספר.</p>
       <form id="form-settings">
         <label>
           כתובת URL של Google Apps Script (אופציונלי)

@@ -150,7 +150,19 @@ button.link-btn { background: none; border: none; color: var(--accent); padding:
 
 .reader-nav { display: flex; justify-content: space-between; margin-bottom: 1rem; }
 
-.export-card .export-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.export-card .export-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.setup-steps { margin: 0 0 0.75rem; padding-inline-start: 1.3rem; font-size: 0.9rem; }
+.setup-steps li { margin-bottom: 0.35rem; }
+code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.85em;
+  direction: ltr;
+  display: inline-block;
+}
 
 .toast {
   position: fixed;
