@@ -191,13 +191,16 @@ SC.App = (function () {
     $("reader-content").addEventListener("click", (e) => {
       const row = e.target.closest(".verse-row");
       if (!row) return;
-      const form = row.querySelector(".commentary-form");
 
-      if (e.target.classList.contains("btn-add-comment") || e.target.classList.contains("btn-edit-comment")) {
-        form.hidden = false;
-        form.querySelector(".commentary-text-input").focus();
+      if (
+        e.target.classList.contains("btn-add-title") ||
+        e.target.classList.contains("btn-edit-title") ||
+        e.target.classList.contains("btn-add-comment") ||
+        e.target.classList.contains("btn-edit-comment")
+      ) {
+        enterEditMode(row, e.target.classList.contains("btn-add-title") || e.target.classList.contains("btn-edit-title"));
       } else if (e.target.classList.contains("btn-cancel-comment")) {
-        form.hidden = true;
+        renderCurrentSection();
       } else if (e.target.classList.contains("btn-delete-comment")) {
         deleteComment(row.dataset.ref);
       }
@@ -205,7 +208,7 @@ SC.App = (function () {
 
     $("reader-content").addEventListener("submit", (e) => {
       const row = e.target.closest(".verse-row");
-      if (!row || !e.target.classList.contains("commentary-form")) return;
+      if (!row) return;
       e.preventDefault();
       const title = row.querySelector(".commentary-title-input").value.trim();
       const text = row.querySelector(".commentary-text-input").value.trim();
@@ -215,9 +218,25 @@ SC.App = (function () {
     });
   }
 
+  function enterEditMode(row, focusTitle) {
+    row.querySelector(".title-view").hidden = true;
+    row.querySelector(".btn-add-title").hidden = true;
+    row.querySelector(".commentary-title-input").hidden = false;
+
+    row.querySelector(".commentary-view").hidden = true;
+    row.querySelector(".btn-add-comment").hidden = true;
+    row.querySelector(".commentary-text-input").hidden = false;
+    row.querySelector(".commentary-save-actions").hidden = false;
+
+    const target = focusTitle
+      ? row.querySelector(".commentary-title-input")
+      : row.querySelector(".commentary-text-input");
+    target.focus();
+  }
+
   async function saveComment(ref, data) {
-    if (!data.text) {
-      SC.UI.toast("נא להזין טקסט לפרשנות", true);
+    if (!data.text && !data.title) {
+      SC.UI.toast("נא להזין כותרת או טקסט פרשנות", true);
       return;
     }
     const bookId = currentBook.id;

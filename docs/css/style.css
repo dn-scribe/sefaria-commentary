@@ -138,15 +138,21 @@ button.link-btn { background: none; border: none; color: var(--accent); padding:
   border-radius: var(--radius);
   padding: 0.8rem 1rem;
 }
+.verse-title-row { margin-bottom: 0.5rem; }
+.title-view { display: flex; align-items: baseline; gap: 0.6rem; }
+.title-view strong { font-size: 1.05rem; color: var(--accent-dark); }
+
 .verse-text { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.4rem; }
 .verse-num { color: var(--accent); font-weight: bold; font-size: 0.8rem; }
 .verse-he { font-size: 1.15rem; line-height: 1.7; }
 .verse-en { font-size: 0.85rem; direction: ltr; text-align: left; }
 
-.commentary-view { background: var(--bg); border-radius: 8px; padding: 0.6rem 0.8rem; margin-top: 0.4rem; }
-.commentary-text { white-space: pre-wrap; margin-top: 0.2rem; }
+.verse-commentary-row { margin-top: 0.4rem; }
+.commentary-view { background: var(--bg); border-radius: 8px; padding: 0.6rem 0.8rem; }
+.commentary-text { white-space: pre-wrap; }
 .commentary-actions { display: flex; gap: 0.8rem; margin-top: 0.3rem; }
-.commentary-form { margin-top: 0.5rem; }
+.commentary-title-input { margin-bottom: 0; }
+.commentary-save-actions { margin-top: 0.5rem; }
 
 .reader-nav { display: flex; justify-content: space-between; margin-bottom: 1rem; }
 
