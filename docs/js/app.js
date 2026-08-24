@@ -58,6 +58,7 @@ SC.App = (function () {
       }
       state = await SC.Storage.load();
       await goToBooks();
+      syncBookList();
     };
   }
 
@@ -69,8 +70,12 @@ SC.App = (function () {
   }
 
   // ---------- Books ----------
-  async function goToBooks() {
+  function renderBookListOnly() {
     SC.UI.renderBooks(state.books, { onOpen: openBook, onDelete: deleteBook });
+  }
+
+  async function goToBooks() {
+    renderBookListOnly();
     SC.UI.showScreen("books");
   }
 
@@ -175,6 +180,7 @@ SC.App = (function () {
         exportedRefs: [],
         lastExportedAt: null,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       state.books.push(book);
       state.commentary[book.id] = {};
@@ -183,6 +189,7 @@ SC.App = (function () {
       SC.UI.renderSearchResults([], () => {});
       await goToBooks();
       SC.UI.toast(`נוסף: ${book.heTitle}`);
+      scheduleBookListSync();
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בהוספת הספר", true);
     }
@@ -215,6 +222,7 @@ SC.App = (function () {
         exportedRefs: [],
         lastExportedAt: null,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       state.books.push(book);
       state.commentary[book.id] = {};
@@ -222,6 +230,7 @@ SC.App = (function () {
       $("input-scope-search").value = "";
       await goToBooks();
       SC.UI.toast(`נוסף: ${book.heTitle} — ${book.scopeHeRef}`);
+      scheduleBookListSync();
     } catch (err) {
       SC.UI.toast(err.message || "לא ניתן לפענח את ההפניה הזו בספריא", true);
     }
@@ -249,8 +258,10 @@ SC.App = (function () {
     }
     state.books = state.books.filter((b) => b.id !== book.id);
     delete state.commentary[book.id];
+    state.deletedBookIds[book.id] = Date.now();
     await persist();
     await goToBooks();
+    scheduleBookListSync();
   }
 
   // ---------- Reader ----------
@@ -289,9 +300,11 @@ SC.App = (function () {
         currentBook.lastRef = currentSection.sectionRef;
       }
       currentBook.currentRef = section.sectionRef;
+      currentBook.updatedAt = Date.now();
       currentSection = section;
       await persist();
       renderCurrentSection();
+      scheduleBookListSync();
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
     }
@@ -385,11 +398,72 @@ SC.App = (function () {
         if (res.sheetId && !book.sheetId) {
           book.sheetId = res.sheetId;
           book.sheetUrl = res.sheetUrl;
+          book.updatedAt = Date.now();
           persist();
           if (currentBook === book) updateExportLink();
+          scheduleBookListSync();
         }
       })
       .catch((err) => console.warn("Sheet sync failed", err));
+  }
+
+  // ---------- Book list sync (cross-device) ----------
+  // Only book metadata (titles, refs, reading position, linked sheet/doc
+  // ids) syncs through this - commentary text never does, only via the
+  // existing per-book sync/export.
+  let bookListSyncTimer = null;
+  function scheduleBookListSync() {
+    clearTimeout(bookListSyncTimer);
+    bookListSyncTimer = setTimeout(syncBookList, 800);
+  }
+
+  async function syncBookList() {
+    if (!state.settings.gasUrl) return;
+    try {
+      const remote = await SC.Api.getBookList(state.settings.gasUrl);
+      mergeRemoteBookList(remote);
+      await persist();
+      renderBookListOnly();
+      await SC.Api.setBookList(state.settings.gasUrl, state.books, state.deletedBookIds);
+    } catch (err) {
+      console.warn("Book list sync failed", err);
+    }
+  }
+
+  // Last-write-wins per book, keyed by each book's own updatedAt, with
+  // tombstones so a delete on one device doesn't get resurrected by a
+  // stale add still sitting on another device.
+  function mergeRemoteBookList(remote) {
+    const remoteBooks = remote.books || [];
+    const remoteDeleted = remote.deletedBookIds || {};
+
+    Object.keys(remoteDeleted).forEach((id) => {
+      const ts = remoteDeleted[id];
+      if (!state.deletedBookIds[id] || ts > state.deletedBookIds[id]) {
+        state.deletedBookIds[id] = ts;
+      }
+    });
+
+    const merged = new Map();
+    remoteBooks.forEach((rb) => merged.set(rb.id, rb));
+    state.books.forEach((lb) => {
+      const rb = merged.get(lb.id);
+      if (!rb || (lb.updatedAt || 0) >= (rb.updatedAt || 0)) {
+        merged.set(lb.id, lb);
+      }
+    });
+
+    const finalBooks = [];
+    merged.forEach((b, id) => {
+      const deletedAt = state.deletedBookIds[id];
+      if (deletedAt && deletedAt >= (b.updatedAt || 0)) return;
+      finalBooks.push(b);
+    });
+
+    state.books = finalBooks;
+    finalBooks.forEach((b) => {
+      if (!state.commentary[b.id]) state.commentary[b.id] = {};
+    });
   }
 
   function bookRef(book) {
@@ -457,9 +531,11 @@ SC.App = (function () {
       currentBook.exportedRefs =
         mode === "replace" ? entries.map((e) => e.ref) : Array.from(new Set([...currentBook.exportedRefs, ...entries.map((e) => e.ref)]));
       currentBook.lastExportedAt = Date.now();
+      currentBook.updatedAt = Date.now();
       await persist();
       updateExportLink();
       SC.UI.toast("הייצוא הושלם");
+      scheduleBookListSync();
     } catch (err) {
       $("export-status").textContent = "";
       SC.UI.toast(err.message || "הייצוא נכשל", true);

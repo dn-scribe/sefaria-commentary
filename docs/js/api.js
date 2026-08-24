@@ -95,5 +95,22 @@ SC.Api = (function () {
     return json;
   }
 
-  return { searchTitles, getIndex, getSection, getShape, sefariaUrl, callGas };
+  async function getBookList(gasUrl) {
+    return callGas(gasUrl, { action: "getBookList" });
+  }
+
+  async function setBookList(gasUrl, books, deletedBookIds) {
+    return callGas(gasUrl, { action: "setBookList", books, deletedBookIds });
+  }
+
+  return {
+    searchTitles,
+    getIndex,
+    getSection,
+    getShape,
+    sefariaUrl,
+    callGas,
+    getBookList,
+    setBookList,
+  };
 })();
