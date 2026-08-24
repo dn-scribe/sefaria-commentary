@@ -4,13 +4,19 @@ A private commentary writing tool integrated with Sefaria, Google Sheets, and Go
 
 ## Features
 
-- 📖 Write commentary on books published at Sefaria
+- 📖 Write commentary on books published at Sefaria - the whole book, or a specific chapter/part picked from a menu (or a free-text reference for special sections)
 - 🔒 Local storage with passphrase protection - commentary text stays on-device, encrypted
-- 📱 Works offline; commentary itself is not synced across devices
-- 🔄 Book list and reading position sync across devices (optional, via Google)
-- 📄 Export to Google Docs
+- 📱 Works fully offline with just local storage
+- 🔄 Optional sync via your own Google account: book list, chosen chapters, and reading position sync across devices, and every comment is automatically backed up to that book's Google Sheet as you write - so commentary you wrote on one device shows up when you open the same book elsewhere
+- 📄 Export to Google Docs - update-only or a fresh full version, with the book+comment text right-aligned and each reference a clickable link back to Sefaria
 - 🌐 Full RTL support for Hebrew
-- 📚 Manage multiple books
+- 📚 Manage multiple books, including several independently-tracked chapters of the same book
+
+## How to Use
+
+Open the app at **[dn-scribe.github.io/sefaria-commentary](https://dn-scribe.github.io/sefaria-commentary/)**, set a passphrase, and add a book (or a specific chapter) from Sefaria.
+
+To sync across devices and export to Google Docs/Sheets, connect your Google account once from the app's **Settings** (⚙️) screen - see [Google Apps Script Integration](#3-google-apps-script-integration-optional) below for the one-time setup.
 
 ## About
 
@@ -119,9 +125,10 @@ All data is stored locally in your browser:
 
 ## Privacy
 
-- No data is sent to any server by default
-- Data remains in your browser's local storage
-- Optional: Export to your personal Google Docs/Sheets
+- No data is sent anywhere unless you connect a Google Apps Script URL in Settings - that step is entirely optional, and everything stays local (encrypted) without it
+- Once connected: every comment is automatically synced to that book's Google Sheet as you write (for backup and cross-device recall), and the book list (titles, chosen chapters, reading position, linked Sheet/Doc ids) syncs through a file in your Drive
+- Doc export only ever happens when you explicitly click one of the export buttons
+- All of it - Sheets, Docs, the book-list file - lives in your own Google Drive; this app has no server or database of its own
 
 ## Development
 
