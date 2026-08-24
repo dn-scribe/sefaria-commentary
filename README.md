@@ -67,12 +67,27 @@ Your app will be available at: `https://dn-scribe.github.io/sefaria-commentary/`
 
 ### 3. Google Apps Script Integration (Optional)
 
-To enable Google Docs/Sheets export:
+This is a one-time, global setup — you do **not** create or connect a
+Sheet/Doc per book. Each book automatically gets its own Google Sheet
+(synced as its commentary database) and its own Google Doc (for the
+exported, readable version) the first time you save or export commentary
+for it. You never paste a spreadsheet or document ID anywhere.
 
-1. Create a Google Apps Script project at [script.google.com](https://script.google.com/) and paste in the contents of [`gas/Code.gs`](gas/Code.gs)
-2. Deploy as a web app (Execute as: Me, Access: Only myself)
-3. Copy the deployment URL into the app settings
-4. Grant necessary permissions to access your Drive
+To enable it:
+
+1. Go to [script.google.com](https://script.google.com/) → New project
+2. Delete the placeholder code and paste in the full contents of [`gas/Code.gs`](gas/Code.gs)
+3. Click **Deploy → New deployment**, select type **Web app**
+4. Set "Execute as": **Me**, "Who has access": **Anyone** (this does *not* make your data public - the code still only ever runs as you, and the deployment URL is an unguessable secret token that only you have; "Only myself" would instead reject every request, since a browser `fetch()` has no way to prove it's you)
+5. Google will show a one-time authorization prompt (access to your Sheets/Docs/Drive) — click through it. This does not require creating anything in Google Cloud Console; it's the standard Apps Script consent screen.
+6. Copy the resulting Web App URL (ends in `/exec`)
+7. In the app, open **Settings** (⚙️), paste the URL into "Google Apps Script URL", click **שמירה** (Save), then **בדיקת חיבור** (Test Connection) to confirm it responds
+
+From then on:
+- Every commentary save silently syncs that book's row into its own Sheet (created automatically on first sync)
+- The **ייצוא ל-Google Docs** buttons on a book's reader screen create/update that book's Doc — "עדכון" appends only new/changed commentary, "ייצוא גרסה מלאה חדשה" appends a dated divider and a fresh full copy (older content is kept, never erased)
+- Once created, links to open the book's Sheet and Doc appear on its reader screen
+- Deleting a book from the app also trashes its linked Sheet and Doc in Drive
 
 ## Project Structure
 
