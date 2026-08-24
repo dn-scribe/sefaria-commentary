@@ -32,6 +32,9 @@ function doPost(e) {
       case "sync":
         result = handleSync(payload);
         break;
+      case "getCommentary":
+        result = handleGetCommentary(payload);
+        break;
       case "export":
         result = handleExport(payload);
         break;
@@ -55,16 +58,15 @@ function doPost(e) {
   );
 }
 
+var COMMENTARY_COLUMNS = ["Ref", "Title", "Comment", "Source (He)", "Source (En)", "Updated At"];
+
 function getOrCreateSheet(book) {
   var ss;
   if (book.sheetId) {
     ss = SpreadsheetApp.openById(book.sheetId);
   } else {
     ss = SpreadsheetApp.create("Sefaria Commentary - " + (book.heTitle || book.title));
-    var sheet = ss.getSheets()[0];
-    sheet.setName("Commentary");
-    sheet.appendRow(["Ref", "Title", "Comment", "Updated At"]);
-    sheet.getRange(1, 1, 1, 4).setFontWeight("bold");
+    ss.getSheets()[0].setName("Commentary");
   }
   return ss;
 }
@@ -94,12 +96,17 @@ function appendSefariaLink(body, ref) {
   return p;
 }
 
-/** Sheet always mirrors the full current commentary set for the book. */
+/** Sheet always mirrors the full current commentary set for the book - this
+ * is what a different device reads back via handleGetCommentary, so it
+ * carries the source-text snapshot too, not just the comment. */
 function handleSync(payload) {
   var book = payload.book;
   var entries = payload.entries || [];
   var ss = getOrCreateSheet(book);
   var sheet = ss.getSheetByName("Commentary") || ss.getSheets()[0];
+  var cols = COMMENTARY_COLUMNS.length;
+
+  sheet.getRange(1, 1, 1, cols).setValues([COMMENTARY_COLUMNS]).setFontWeight("bold");
 
   var lastRow = sheet.getLastRow();
   if (lastRow > 1) {
@@ -107,11 +114,48 @@ function handleSync(payload) {
   }
   entries.forEach(function (entry, i) {
     sheet
-      .getRange(i + 2, 1, 1, 4)
-      .setValues([[entry.ref, entry.title || "", entry.text || "", new Date(entry.updatedAt).toISOString()]]);
+      .getRange(i + 2, 1, 1, cols)
+      .setValues([
+        [
+          entry.ref,
+          entry.title || "",
+          entry.text || "",
+          entry.heText || "",
+          entry.enText || "",
+          new Date(entry.updatedAt).toISOString(),
+        ],
+      ]);
   });
 
   return { sheetId: ss.getId(), sheetUrl: ss.getUrl() };
+}
+
+/** Reads the Sheet back, so a different device can recover commentary that
+ * was written from elsewhere - the Sheet is the durable cross-device copy. */
+function handleGetCommentary(payload) {
+  var book = payload.book || {};
+  if (!book.sheetId) return { entries: [] };
+  var ss = SpreadsheetApp.openById(book.sheetId);
+  var sheet = ss.getSheetByName("Commentary") || ss.getSheets()[0];
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { entries: [] };
+
+  var values = sheet.getRange(2, 1, lastRow - 1, COMMENTARY_COLUMNS.length).getValues();
+  var entries = values
+    .filter(function (row) {
+      return row[0];
+    })
+    .map(function (row) {
+      return {
+        ref: row[0],
+        title: row[1],
+        text: row[2],
+        heText: row[3],
+        enText: row[4],
+        updatedAt: row[5] ? new Date(row[5]).getTime() : 0,
+      };
+    });
+  return { entries: entries };
 }
 
 /**

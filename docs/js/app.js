@@ -274,6 +274,40 @@ SC.App = (function () {
       SC.UI.showScreen("reader");
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
+      return;
+    }
+    // Local storage is per-device; the Sheet (written on every save) is the
+    // durable cross-device copy. Pull it back on open so commentary written
+    // elsewhere shows up here too - render first so opening never blocks on it.
+    const changed = await pullCommentary(book);
+    if (changed && currentBook === book) renderCurrentSection();
+  }
+
+  async function pullCommentary(book) {
+    if (!state.settings.gasUrl || !book.sheetId) return false;
+    try {
+      const res = await SC.Api.getCommentary(state.settings.gasUrl, book);
+      const local = state.commentary[book.id] || {};
+      let changed = false;
+      (res.entries || []).forEach((e) => {
+        const existing = local[e.ref];
+        if (!existing || (e.updatedAt || 0) > (existing.updatedAt || 0)) {
+          local[e.ref] = {
+            title: e.title,
+            text: e.text,
+            heText: e.heText || existing?.heText || "",
+            enText: e.enText || existing?.enText || "",
+            updatedAt: e.updatedAt,
+          };
+          changed = true;
+        }
+      });
+      state.commentary[book.id] = local;
+      if (changed) await persist();
+      return changed;
+    } catch (err) {
+      console.warn("Commentary pull failed", err);
+      return false;
     }
   }
 
