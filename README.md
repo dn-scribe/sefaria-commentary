@@ -50,7 +50,8 @@ open the app see the book list, choose a book to get to the last paragraph learn
 - User can access from multiple devices
 - If Google Apps Script is connected (see Setup below), the book list - titles, chosen scopes, and the reading position per book - syncs across devices through a file in your Drive, so opening the app on a different device shows the same books and resumes each one where you left off
 - Without that connection, or before it's ever synced, each device's book list stays local to it
-- Commentary text itself always stays local and encrypted; it's never included in this sync, only in an explicit per-book sync (to that book's Sheet) or export (to its Doc)
+- Commentary text is never included in the book-list sync file itself, but it does round-trip through Google when connected: every save pushes it to that book's Sheet, and opening a book pulls its Sheet back down and merges anything written elsewhere (last-write-wins per entry) - so commentary written on your phone shows up when you open the same book on desktop, and vice versa
+- Without a Google connection, commentary stays purely local to each device
 
 ## Setup
 

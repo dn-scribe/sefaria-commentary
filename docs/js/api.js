@@ -95,6 +95,10 @@ SC.Api = (function () {
     return json;
   }
 
+  async function getCommentary(gasUrl, book) {
+    return callGas(gasUrl, { action: "getCommentary", book: { sheetId: book.sheetId } });
+  }
+
   async function getBookList(gasUrl) {
     return callGas(gasUrl, { action: "getBookList" });
   }
@@ -112,5 +116,6 @@ SC.Api = (function () {
     callGas,
     getBookList,
     setBookList,
+    getCommentary,
   };
 })();
