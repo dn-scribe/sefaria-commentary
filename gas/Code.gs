@@ -38,6 +38,12 @@ function doPost(e) {
       case "deleteBook":
         result = handleDelete(payload);
         break;
+      case "getBookList":
+        result = handleGetBookList();
+        break;
+      case "setBookList":
+        result = handleSetBookList(payload);
+        break;
       default:
         throw new Error("Unknown action: " + payload.action);
     }
@@ -159,6 +165,42 @@ function handleExport(payload) {
     docId: doc.getId(),
     docUrl: doc.getUrl(),
   };
+}
+
+var BOOK_LIST_FILE_NAME = "Sefaria Commentary - Book List";
+
+// A single JSON file in Drive holding the book list (titles, refs, reading
+// position, linked sheet/doc ids) so it can sync across devices. Commentary
+// text itself is never sent here - only through explicit sync/export.
+function getBookListFile() {
+  var files = DriveApp.getFilesByName(BOOK_LIST_FILE_NAME);
+  if (files.hasNext()) return files.next();
+  return DriveApp.createFile(
+    BOOK_LIST_FILE_NAME,
+    JSON.stringify({ books: [], deletedBookIds: {} }),
+    MimeType.PLAIN_TEXT
+  );
+}
+
+function handleGetBookList() {
+  var file = getBookListFile();
+  try {
+    var data = JSON.parse(file.getBlob().getDataAsString());
+    return { books: data.books || [], deletedBookIds: data.deletedBookIds || {} };
+  } catch (e) {
+    return { books: [], deletedBookIds: {} };
+  }
+}
+
+function handleSetBookList(payload) {
+  var file = getBookListFile();
+  file.setContent(
+    JSON.stringify({
+      books: payload.books || [],
+      deletedBookIds: payload.deletedBookIds || {},
+    })
+  );
+  return { ok: true };
 }
 
 function handleDelete(payload) {

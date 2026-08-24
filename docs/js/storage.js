@@ -10,6 +10,8 @@ SC.Storage = (function () {
       books: [],
       // commentary[bookId][ref] = { title, text, updatedAt }
       commentary: {},
+      // Tombstones for cross-device book-list sync: { bookId: deletedAtMs }
+      deletedBookIds: {},
     };
   }
 
