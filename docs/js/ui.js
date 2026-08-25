@@ -65,7 +65,7 @@ SC.UI = (function () {
       li.innerHTML = `
         <div class="book-info">
           <strong>${escapeHtml(book.heTitle || book.title)}${book.scopeHeRef ? " — " + escapeHtml(book.scopeHeRef) : ""}</strong>
-          <span class="muted">${book.lastRef ? "המשך מ: " + escapeHtml(book.lastRef) : "טרם התחיל"}</span>
+          <span class="muted">${escapeHtml(book.currentHeRef || book.currentRef || "")}</span>
         </div>
         <div class="book-actions">
           <button class="secondary btn-open">פתיחה</button>

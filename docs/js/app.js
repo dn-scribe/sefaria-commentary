@@ -172,6 +172,7 @@ SC.App = (function () {
         scopeRef: null,
         scopeHeRef: null,
         currentRef: idx.firstRef,
+        currentHeRef: idx.firstHeRef,
         lastRef: null,
         sheetId: null,
         sheetUrl: null,
@@ -207,6 +208,13 @@ SC.App = (function () {
         return;
       }
       const idx = await SC.Api.getIndex(section.book);
+      // section.heRef is the Hebrew label of the query itself; if that query
+      // was a container (e.g. a whole Part), the actual starting section is
+      // more specific and needs its own lookup for an accurate label.
+      const startHeRef =
+        section.firstAvailableSectionRef === section.ref
+          ? section.heRef
+          : (await SC.Api.getSection(section.firstAvailableSectionRef)).heRef;
       const book = {
         id: uid(),
         title: idx.title,
@@ -214,6 +222,7 @@ SC.App = (function () {
         scopeRef: section.ref,
         scopeHeRef: section.heRef,
         currentRef: section.firstAvailableSectionRef,
+        currentHeRef: startHeRef,
         lastRef: null,
         sheetId: null,
         sheetUrl: null,
@@ -334,6 +343,7 @@ SC.App = (function () {
         currentBook.lastRef = currentSection.sectionRef;
       }
       currentBook.currentRef = section.sectionRef;
+      currentBook.currentHeRef = section.heRef;
       currentBook.updatedAt = Date.now();
       currentSection = section;
       await persist();

@@ -16,11 +16,16 @@ SC.Api = (function () {
     const res = await fetch(`${BASE}/api/index/${encodeURIComponent(title)}`);
     if (!res.ok) throw new Error("Book not found on Sefaria");
     const json = await res.json();
-    const firstRef = await getFirstSectionRef(json.title || title);
+    const bookTitle = json.title || title;
+    const firstRef = await getFirstSectionRef(bookTitle);
+    // A second lookup for the Hebrew label of that specific starting
+    // section (the book-level response's heRef doesn't match it).
+    const firstSection = await getSection(firstRef);
     return {
-      title: json.title || title,
-      heTitle: json.heTitle || json.title || title,
-      firstRef,
+      title: bookTitle,
+      heTitle: json.heTitle || bookTitle,
+      firstRef: firstSection.ref,
+      firstHeRef: firstSection.heRef,
     };
   }
 
