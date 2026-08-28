@@ -542,12 +542,55 @@ SC.App = (function () {
       : "";
   }
 
+  // Walks every section of the book (or, if scoped, just within that scope)
+  // via next/prev chaining, producing one row per line whether or not it
+  // has commentary - a text-only row still shows the source in the Doc.
+  async function collectFullText(book) {
+    const commentary = state.commentary[book.id] || {};
+    const start = await SC.Api.getSection(book.scopeRef || book.title);
+    const entries = [];
+    let sectionRef = start.firstAvailableSectionRef;
+    let guard = 0;
+    while (sectionRef && guard < 1000) {
+      guard++;
+      const section = await SC.Api.getSection(sectionRef);
+      const lines = section.he.length ? section.he : section.text;
+      const enLines = section.text;
+      lines.forEach((line, i) => {
+        const ref = SC.UI.commentaryRefFor(section.sectionRef, i);
+        const c = commentary[ref];
+        entries.push({
+          ref,
+          heText: SC.UI.stripTags(line),
+          enText: SC.UI.stripTags(enLines[i] || ""),
+          title: c ? c.title || "" : "",
+          text: c ? c.text || "" : "",
+          updatedAt: c ? c.updatedAt || 0 : 0,
+        });
+      });
+      if (!section.next || !isWithinScope(section.next, book.scopeRef)) break;
+      sectionRef = section.next;
+    }
+    return entries;
+  }
+
   async function exportBook(mode) {
     if (!state.settings.gasUrl) {
       SC.UI.toast("יש להגדיר כתובת Google Apps Script בהגדרות תחילה", true);
       return;
     }
-    const all = sortedEntries(currentBook.id);
+    const fullText = $("chk-export-full-text").checked;
+    $("export-status").textContent = fullText
+      ? "אוסף את הטקסט המלא... זה עשוי לקחת זמן לספרים גדולים"
+      : "אוסף פרשנות...";
+    let all;
+    try {
+      all = fullText ? await collectFullText(currentBook) : sortedEntries(currentBook.id);
+    } catch (err) {
+      $("export-status").textContent = "";
+      SC.UI.toast(err.message || "שגיאה באיסוף הטקסט", true);
+      return;
+    }
     const entries =
       mode === "replace"
         ? all
@@ -556,7 +599,8 @@ SC.App = (function () {
           );
 
     if (!entries.length) {
-      SC.UI.toast("אין פרשנות חדשה לייצוא");
+      $("export-status").textContent = "";
+      SC.UI.toast("אין תוכן חדש לייצוא");
       return;
     }
 
