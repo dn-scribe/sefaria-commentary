@@ -679,7 +679,7 @@ SC.App = (function () {
     entries.forEach((entry) => {
       if (entry.title) {
         children.push(
-          rightPara({ heading: HeadingLevel.HEADING_4, children: [new TextRun({ text: entry.title, bold: true })] })
+          rightPara({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: entry.title, bold: true })] })
         );
       }
       if (entry.heText) {
@@ -803,12 +803,23 @@ SC.App = (function () {
     $("btn-export-docx").onclick = exportDocx;
   }
 
+  function initVersion() {
+    $("header-version").textContent = "v" + SC.APP_VERSION;
+    $("app-version").textContent = SC.APP_VERSION;
+    $("btn-view-changelog").onclick = () => {
+      SC.UI.renderChangelog(SC.CHANGELOG);
+      SC.UI.showScreen("changelog");
+    };
+    $("btn-back-from-changelog").onclick = () => SC.UI.showScreen("settings");
+  }
+
   function init() {
     initAuth();
     initBookSearch();
     initReaderEvents();
     initSettings();
     initHeader();
+    initVersion();
   }
 
   return { init };
