@@ -188,7 +188,7 @@ function handleExport(payload) {
     // link back to Sefaria instead of a plain ref prefix, then the comment
     // at the bottom.
     if (entry.title) {
-      appendRightParagraph(body, entry.title).setBold(true).setHeading(DocumentApp.ParagraphHeading.HEADING4);
+      appendRightParagraph(body, entry.title).setBold(true).setHeading(DocumentApp.ParagraphHeading.HEADING1);
     }
     if (entry.heText) {
       appendRightParagraph(body, entry.heText);

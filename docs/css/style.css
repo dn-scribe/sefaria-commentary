@@ -34,6 +34,18 @@ body {
   z-index: 10;
 }
 .app-title { margin: 0; font-size: 1.2rem; }
+.version-badge { font-size: 0.65rem; color: var(--muted); font-weight: normal; vertical-align: middle; }
+
+.changelog-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.6rem;
+}
+.changelog-entry h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.changelog-entry ul { margin: 0; padding-inline-start: 1.3rem; }
+.changelog-entry li { margin-bottom: 0.25rem; }
 .header-actions { display: flex; gap: 0.4rem; }
 
 .icon-btn {

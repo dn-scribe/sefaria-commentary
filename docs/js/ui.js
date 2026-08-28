@@ -55,6 +55,19 @@ SC.UI = (function () {
     });
   }
 
+  function renderChangelog(entries) {
+    const container = $("changelog-list");
+    container.innerHTML = entries
+      .map(
+        (entry) => `
+      <div class="changelog-entry">
+        <h3>גרסה ${escapeHtml(entry.version)} <span class="muted">- ${escapeHtml(entry.date)}</span></h3>
+        <ul>${entry.changes.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>
+      </div>`
+      )
+      .join("");
+  }
+
   function renderBooks(books, handlers) {
     const list = $("book-list");
     list.innerHTML = "";
@@ -171,5 +184,6 @@ SC.UI = (function () {
     renderReader,
     commentaryRefFor,
     stripTags,
+    renderChangelog,
   };
 })();
