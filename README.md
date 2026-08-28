@@ -8,7 +8,7 @@ A private commentary writing tool integrated with Sefaria, Google Sheets, and Go
 - 🔒 Local storage with passphrase protection - commentary text stays on-device, encrypted
 - 📱 Works fully offline with just local storage
 - 🔄 Optional sync via your own Google account: book list, chosen chapters, and reading position sync across devices, and every comment is automatically backed up to that book's Google Sheet as you write - so commentary you wrote on one device shows up when you open the same book elsewhere
-- 📄 Export to Google Docs - update-only or a fresh full version, with the book+comment text right-aligned and each reference a clickable link back to Sefaria
+- 📄 Export to Google Docs (needs Google connected), or download a `.docx` file directly - no account or setup needed at all - both right-aligned, with each reference a clickable link back to Sefaria
 - 🌐 Full RTL support for Hebrew
 - 📚 Manage multiple books, including several independently-tracked chapters of the same book
 
