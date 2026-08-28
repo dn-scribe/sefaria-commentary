@@ -170,5 +170,6 @@ SC.UI = (function () {
     renderBooks,
     renderReader,
     commentaryRefFor,
+    stripTags,
   };
 })();
