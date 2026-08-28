@@ -630,6 +630,93 @@ SC.App = (function () {
     }
   }
 
+  // ---------- Word (.docx) export - no Google account needed ----------
+  // Runs entirely client-side via the vendored docx.js (js/vendor/docx.min.js)
+  // and triggers a normal browser download. One-shot: unlike the Google Doc
+  // export there's no "update only" concept, since there's no persisted
+  // remote file to diff against - it's always the current full set.
+  async function exportDocx() {
+    const fullText = $("chk-export-full-text").checked;
+    $("export-status").textContent = fullText
+      ? "אוסף את הטקסט המלא... זה עשוי לקחת זמן לספרים גדולים"
+      : "אוסף פרשנות...";
+    let entries;
+    try {
+      entries = fullText ? await collectFullText(currentBook) : sortedEntries(currentBook.id);
+    } catch (err) {
+      $("export-status").textContent = "";
+      SC.UI.toast(err.message || "שגיאה באיסוף הטקסט", true);
+      return;
+    }
+    if (!entries.length) {
+      $("export-status").textContent = "";
+      SC.UI.toast("אין תוכן לייצוא");
+      return;
+    }
+
+    $("export-status").textContent = "בונה קובץ Word...";
+    try {
+      const blob = await buildDocxBlob(currentBook, entries);
+      const label = currentBook.heTitle + (currentBook.scopeHeRef ? " - " + currentBook.scopeHeRef : "");
+      downloadBlob(blob, `${label} - פרשנות.docx`);
+      $("export-status").textContent = "קובץ ה-Word הורד";
+    } catch (err) {
+      $("export-status").textContent = "";
+      SC.UI.toast(err.message || "יצירת קובץ ה-Word נכשלה", true);
+    }
+  }
+
+  // Mirrors gas/Code.gs's handleExport layout: title on top, source text,
+  // a clickable Sefaria link, then the comment - all right-aligned.
+  function buildDocxBlob(book, entries) {
+    const { Document, Packer, Paragraph, TextRun, ExternalHyperlink, HeadingLevel, AlignmentType } = window.docx;
+    const label = book.heTitle + (book.scopeHeRef ? " - " + book.scopeHeRef : "");
+
+    const rightPara = (opts) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, ...opts });
+
+    const children = [rightPara({ text: label + " - פרשנות", heading: HeadingLevel.TITLE })];
+
+    entries.forEach((entry) => {
+      if (entry.title) {
+        children.push(
+          rightPara({ heading: HeadingLevel.HEADING_4, children: [new TextRun({ text: entry.title, bold: true })] })
+        );
+      }
+      if (entry.heText) {
+        children.push(rightPara({ children: [new TextRun(entry.heText)] }));
+      }
+      if (entry.ref) {
+        children.push(
+          rightPara({
+            children: [
+              new ExternalHyperlink({
+                link: SC.Api.sefariaUrl(entry.ref),
+                children: [new TextRun({ text: entry.ref, color: "1155CC", underline: {} })],
+              }),
+            ],
+          })
+        );
+      }
+      if (entry.text) {
+        children.push(rightPara({ children: [new TextRun(entry.text)] }));
+      }
+      children.push(rightPara({ text: "" }));
+    });
+
+    return Packer.toBlob(new Document({ sections: [{ children }] }));
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   // ---------- Settings ----------
   function initSettings() {
     $("btn-nav-settings").onclick = () => {
@@ -713,6 +800,7 @@ SC.App = (function () {
     $("btn-logout").onclick = logout;
     $("btn-export-update").onclick = () => exportBook("update");
     $("btn-export-replace").onclick = () => exportBook("replace");
+    $("btn-export-docx").onclick = exportDocx;
   }
 
   function init() {
