@@ -397,10 +397,10 @@ SC.App = (function () {
     SC.UI.renderReader(currentBook, currentSection, state.commentary[currentBook.id] || {});
     if (currentBook.scopeRef) {
       if (currentSection.next && !isWithinScope(currentSection.next, currentBook.scopeRef)) {
-        $("btn-next-section").disabled = true;
+        document.querySelectorAll(".btn-next-section").forEach((b) => (b.disabled = true));
       }
       if (currentSection.prev && !isWithinScope(currentSection.prev, currentBook.scopeRef)) {
-        $("btn-prev-section").disabled = true;
+        document.querySelectorAll(".btn-prev-section").forEach((b) => (b.disabled = true));
       }
     }
     // A custom book isn't a single Sefaria ref, so there's nothing for this
@@ -408,6 +408,9 @@ SC.App = (function () {
     $("btn-open-sefaria").hidden = currentBook.source === "custom";
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
+    // Every navigation (next/prev/home) re-renders through here - always
+    // land back at the top of the page rather than wherever was scrolled to.
+    window.scrollTo(0, 0);
   }
 
   async function goSection(direction) {
@@ -446,10 +449,45 @@ SC.App = (function () {
     }
   }
 
+  // Jumps back to the very first section/chapter of the book (or of the
+  // scope, for a scoped book) - not just one step back like "prev".
+  async function goHome() {
+    if (currentBook.source === "custom") {
+      if ((currentBook.currentChapterIndex || 0) === 0) {
+        window.scrollTo(0, 0);
+        return;
+      }
+      currentBook.lastRef = currentSection.heRef;
+      currentBook.currentChapterIndex = 0;
+      currentBook.currentHeRef = currentBook.customContent.chapters[0].title;
+      currentBook.updatedAt = Date.now();
+      currentSection = customChapterToSection(currentBook, 0);
+      await persist();
+      renderCurrentSection();
+      scheduleBookListSync();
+      return;
+    }
+    try {
+      const start = await SC.Api.getSection(currentBook.scopeRef || currentBook.title);
+      const section = await SC.Api.getSection(start.firstAvailableSectionRef);
+      currentBook.lastRef = currentSection.sectionRef;
+      currentBook.currentRef = section.sectionRef;
+      currentBook.currentHeRef = section.heRef;
+      currentBook.updatedAt = Date.now();
+      currentSection = section;
+      await persist();
+      renderCurrentSection();
+      scheduleBookListSync();
+    } catch (err) {
+      SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
+    }
+  }
+
   function initReaderEvents() {
     $("btn-back-to-books").onclick = goToBooks;
-    $("btn-prev-section").onclick = () => goSection("prev");
-    $("btn-next-section").onclick = () => goSection("next");
+    document.querySelectorAll(".btn-prev-section").forEach((b) => (b.onclick = () => goSection("prev")));
+    document.querySelectorAll(".btn-next-section").forEach((b) => (b.onclick = () => goSection("next")));
+    $("btn-home-section").onclick = goHome;
 
     $("reader-content").addEventListener("click", (e) => {
       const row = e.target.closest(".verse-row");
