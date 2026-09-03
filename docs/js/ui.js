@@ -137,7 +137,7 @@ SC.UI = (function () {
             </div>
           </div>
           <button type="button" class="link-btn btn-add-comment" ${existing?.text ? "hidden" : ""}>+ הוספת פרשנות</button>
-          <textarea class="commentary-text-input" placeholder="כתבו את הפרשנות כאן..." rows="3" hidden>${existing?.text || ""}</textarea>
+          <textarea class="commentary-text-input" placeholder="כתבו את הפרשנות כאן..." rows="10" hidden>${existing?.text || ""}</textarea>
           <div class="row-actions commentary-save-actions" hidden>
             <button type="submit" class="primary">שמירה</button>
             <button type="button" class="secondary btn-cancel-comment">ביטול</button>
@@ -146,8 +146,8 @@ SC.UI = (function () {
       container.appendChild(row);
     });
 
-    $("btn-prev-section").disabled = !section.prev;
-    $("btn-next-section").disabled = !section.next;
+    document.querySelectorAll(".btn-prev-section").forEach((b) => (b.disabled = !section.prev));
+    document.querySelectorAll(".btn-next-section").forEach((b) => (b.disabled = !section.next));
   }
 
   function escapeHtml(str) {
