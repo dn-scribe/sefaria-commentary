@@ -105,6 +105,14 @@ SC.App = (function () {
     };
 
     initScopeChapterPicker();
+
+    $("form-import-custom").onsubmit = async (e) => {
+      e.preventDefault();
+      const file = $("input-custom-file").files[0];
+      if (!file) return;
+      await addCustomBook(file);
+      $("input-custom-file").value = "";
+    };
   }
 
   let scopeSearchDebounce = null;
@@ -245,6 +253,69 @@ SC.App = (function () {
     }
   }
 
+  // A book that isn't on Sefaria at all - its full text lives in the book
+  // record itself (customContent), not fetched live. Everything else
+  // (commentary, navigation, export, cross-device sync) reuses the same
+  // machinery as a Sefaria book; only how a "section" is produced differs.
+  async function addCustomBook(file) {
+    try {
+      const text = await file.text();
+      const fallbackTitle = file.name.replace(/\.(md|txt)$/i, "");
+      const parsed = SC.CustomBook.parseMarkdown(text, fallbackTitle);
+      if (!parsed.chapters.length) {
+        SC.UI.toast('לא נמצאו פרקים בקובץ - ודאו שהפרקים מסומנים כ-"## פרק..." ', true);
+        return;
+      }
+      const book = {
+        id: uid(),
+        source: "custom",
+        title: parsed.title,
+        heTitle: parsed.title,
+        scopeRef: null,
+        scopeHeRef: null,
+        customContent: parsed,
+        currentChapterIndex: 0,
+        currentRef: null,
+        currentHeRef: parsed.chapters[0].title,
+        lastRef: null,
+        sheetId: null,
+        sheetUrl: null,
+        docId: null,
+        docUrl: null,
+        exportedRefs: [],
+        lastExportedAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.books.push(book);
+      state.commentary[book.id] = {};
+      await persist();
+      await goToBooks();
+      SC.UI.toast(`יובא: ${book.heTitle} (${parsed.chapters.length} פרקים, ${parsed.chapters.reduce((n, c) => n + c.paragraphs.length, 0)} פסקאות)`);
+      scheduleBookListSync();
+    } catch (err) {
+      SC.UI.toast(err.message || "שגיאה בייבוא הקובץ", true);
+    }
+  }
+
+  // Produces the same shape SC.Api.getSection returns, so the reader/UI
+  // code never needs to know a book's text isn't coming from Sefaria.
+  function customChapterToSection(book, chapterIndex) {
+    const chapters = book.customContent.chapters;
+    const chapter = chapters[chapterIndex];
+    const ref = `custom:${book.id}:${chapterIndex}`;
+    return {
+      ref,
+      heRef: chapter.title,
+      sectionRef: ref,
+      next: chapterIndex < chapters.length - 1 ? `custom:${book.id}:${chapterIndex + 1}` : null,
+      prev: chapterIndex > 0 ? `custom:${book.id}:${chapterIndex - 1}` : null,
+      he: chapter.paragraphs.map((p) => `${p.letter}. ${p.text}`),
+      text: [],
+      book: book.title,
+    };
+  }
+
   // Prefix match on a canonical ref, requiring a word boundary (":" or " ")
   // so "Likutei Moharan 5" never matches "Likutei Moharan 56".
   function isWithinScope(ref, scopeRef) {
@@ -277,8 +348,10 @@ SC.App = (function () {
   async function openBook(book) {
     currentBook = book;
     try {
-      const section = await SC.Api.getSection(book.currentRef || book.title);
-      currentSection = section;
+      currentSection =
+        book.source === "custom"
+          ? customChapterToSection(book, book.currentChapterIndex || 0)
+          : await SC.Api.getSection(book.currentRef || book.title);
       renderCurrentSection();
       SC.UI.showScreen("reader");
     } catch (err) {
@@ -330,11 +403,30 @@ SC.App = (function () {
         $("btn-prev-section").disabled = true;
       }
     }
+    // A custom book isn't a single Sefaria ref, so there's nothing for this
+    // button to open - hide it rather than link somewhere wrong.
+    $("btn-open-sefaria").hidden = currentBook.source === "custom";
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
   }
 
   async function goSection(direction) {
+    if (currentBook.source === "custom") {
+      const chapters = currentBook.customContent.chapters;
+      const curIdx = currentBook.currentChapterIndex || 0;
+      const nextIdx = direction === "next" ? curIdx + 1 : curIdx - 1;
+      if (nextIdx < 0 || nextIdx >= chapters.length) return;
+      if (direction === "next") currentBook.lastRef = currentSection.heRef;
+      currentBook.currentChapterIndex = nextIdx;
+      currentBook.currentHeRef = chapters[nextIdx].title;
+      currentBook.updatedAt = Date.now();
+      currentSection = customChapterToSection(currentBook, nextIdx);
+      await persist();
+      renderCurrentSection();
+      scheduleBookListSync();
+      return;
+    }
+
     const ref = direction === "next" ? currentSection.next : currentSection.prev;
     if (!ref || !isWithinScope(ref, currentBook.scopeRef)) return;
     try {
@@ -546,6 +638,7 @@ SC.App = (function () {
   // via next/prev chaining, producing one row per line whether or not it
   // has commentary - a text-only row still shows the source in the Doc.
   async function collectFullText(book) {
+    if (book.source === "custom") return collectCustomFullText(book);
     const commentary = state.commentary[book.id] || {};
     const start = await SC.Api.getSection(book.scopeRef || book.title);
     const entries = [];
@@ -571,6 +664,26 @@ SC.App = (function () {
       if (!section.next || !isWithinScope(section.next, book.scopeRef)) break;
       sectionRef = section.next;
     }
+    return entries;
+  }
+
+  function collectCustomFullText(book) {
+    const commentary = state.commentary[book.id] || {};
+    const entries = [];
+    book.customContent.chapters.forEach((chapter, ci) => {
+      chapter.paragraphs.forEach((p, pi) => {
+        const ref = SC.UI.commentaryRefFor(`custom:${book.id}:${ci}`, pi);
+        const c = commentary[ref];
+        entries.push({
+          ref,
+          heText: `${p.letter}. ${p.text}`,
+          enText: "",
+          title: c ? c.title || "" : "",
+          text: c ? c.text || "" : "",
+          updatedAt: c ? c.updatedAt || 0 : 0,
+        });
+      });
+    });
     return entries;
   }
 
@@ -685,7 +798,7 @@ SC.App = (function () {
       if (entry.heText) {
         children.push(rightPara({ children: [new TextRun(entry.heText)] }));
       }
-      if (entry.ref) {
+      if (entry.ref && !entry.ref.startsWith("custom:")) {
         children.push(
           rightPara({
             children: [

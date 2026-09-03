@@ -7,7 +7,16 @@ SC.Crypto = (function () {
   const dec = new TextDecoder();
 
   function toB64(buf) {
-    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    // Spreading the whole array into String.fromCharCode blows the call
+    // stack once state gets large (e.g. an imported book's full text) -
+    // build the binary string in chunks instead.
+    const bytes = new Uint8Array(buf);
+    const CHUNK = 0x8000;
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
   }
   function fromB64(str) {
     return Uint8Array.from(atob(str), (c) => c.charCodeAt(0));

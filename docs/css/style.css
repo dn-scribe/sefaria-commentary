@@ -159,6 +159,15 @@ button.link-btn { background: none; border: none; color: var(--accent); padding:
   margin-bottom: 0.6rem;
 }
 .book-info { display: flex; flex-direction: column; gap: 0.15rem; }
+.local-badge {
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: var(--accent-dark);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.05rem 0.4rem;
+}
 .book-actions { display: flex; gap: 0.4rem; }
 
 .reader-content { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1rem; }

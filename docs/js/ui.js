@@ -77,7 +77,7 @@ SC.UI = (function () {
       li.className = "book-item";
       li.innerHTML = `
         <div class="book-info">
-          <strong>${escapeHtml(book.heTitle || book.title)}${book.scopeHeRef ? " — " + escapeHtml(book.scopeHeRef) : ""}</strong>
+          <strong>${escapeHtml(book.heTitle || book.title)}${book.scopeHeRef ? " — " + escapeHtml(book.scopeHeRef) : ""}${book.source === "custom" ? ' <span class="local-badge">מקומי</span>' : ""}</strong>
           <span class="muted">${escapeHtml(book.currentHeRef || book.currentRef || "")}</span>
         </div>
         <div class="book-actions">
