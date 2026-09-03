@@ -3,9 +3,18 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.7.0";
+SC.APP_VERSION = "1.8.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.8.0",
+    date: "2026-09-03",
+    changes: [
+      "תגיות לכל ספר: הוספת תגית לפסקה מרשימת תגיות הספר, או יצירת תגית חדשה",
+      "תגיות מופיעות תחת כל פסקה בייצוא (Word ו-Google Docs)",
+      "דורש עדכון ה-Apps Script (gas/Code.gs) כדי שתגיות יסתנכרנו בין מכשירים",
+    ],
+  },
   {
     version: "1.7.0",
     date: "2026-09-03",

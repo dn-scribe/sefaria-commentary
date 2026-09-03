@@ -187,6 +187,7 @@ SC.App = (function () {
         docId: null,
         docUrl: null,
         exportedRefs: [],
+        tags: [],
         lastExportedAt: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -237,6 +238,7 @@ SC.App = (function () {
         docId: null,
         docUrl: null,
         exportedRefs: [],
+        tags: [],
         lastExportedAt: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -283,6 +285,7 @@ SC.App = (function () {
         docId: null,
         docUrl: null,
         exportedRefs: [],
+        tags: [],
         lastExportedAt: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -379,6 +382,7 @@ SC.App = (function () {
             text: e.text,
             heText: e.heText || existing?.heText || "",
             enText: e.enText || existing?.enText || "",
+            tags: e.tags && e.tags.length ? e.tags : existing?.tags || [],
             updatedAt: e.updatedAt,
           };
           changed = true;
@@ -504,6 +508,25 @@ SC.App = (function () {
         renderCurrentSection();
       } else if (e.target.classList.contains("btn-delete-comment")) {
         deleteComment(row.dataset.ref);
+      } else if (e.target.classList.contains("tag-chip-remove")) {
+        e.target.closest(".tag-chip").remove();
+      }
+    });
+
+    $("reader-content").addEventListener("change", (e) => {
+      if (!e.target.classList.contains("tag-select")) return;
+      const row = e.target.closest(".verse-row");
+      const select = e.target;
+      const value = select.value;
+      select.value = "";
+      if (!value) return;
+      if (value === "__new__") {
+        const name = (prompt("שם התגית החדשה:") || "").trim();
+        if (!name) return;
+        addTagToBook(name);
+        addTagChip(row, name);
+      } else {
+        addTagChip(row, value);
       }
     });
 
@@ -515,7 +538,46 @@ SC.App = (function () {
       const text = row.querySelector(".commentary-text-input").value.trim();
       const heText = row.querySelector(".verse-he").textContent;
       const enEl = row.querySelector(".verse-en");
-      saveComment(row.dataset.ref, { title, text, heText, enText: enEl ? enEl.textContent : "" });
+      const tags = Array.from(row.querySelectorAll(".tag-chip-list .tag-chip")).map((el) => el.dataset.tag);
+      saveComment(row.dataset.ref, { title, text, heText, enText: enEl ? enEl.textContent : "", tags });
+    });
+  }
+
+  // Adds a tag to the row's in-progress chip list (no duplicates). Existing
+  // chips are already in the DOM from the server-rendered template; this only
+  // handles chips added interactively during this edit session.
+  function addTagChip(row, tag) {
+    const list = row.querySelector(".tag-chip-list");
+    if (Array.from(list.children).some((c) => c.dataset.tag === tag)) return;
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.dataset.tag = tag;
+    const label = document.createElement("span");
+    label.textContent = tag;
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "tag-chip-remove";
+    removeBtn.textContent = "×";
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+    list.appendChild(chip);
+  }
+
+  // Adds a new tag to the book's tag list (available to every paragraph in
+  // this book) and reflects it into every tag-select on the current page
+  // immediately, without a full re-render.
+  function addTagToBook(tag) {
+    currentBook.tags = currentBook.tags || [];
+    if (currentBook.tags.includes(tag)) return;
+    currentBook.tags.push(tag);
+    currentBook.updatedAt = Date.now();
+    persist();
+    scheduleBookListSync();
+    document.querySelectorAll(".tag-select").forEach((select) => {
+      const opt = document.createElement("option");
+      opt.value = tag;
+      opt.textContent = tag;
+      select.insertBefore(opt, select.lastElementChild);
     });
   }
 
@@ -527,6 +589,7 @@ SC.App = (function () {
     row.querySelector(".commentary-view").hidden = true;
     row.querySelector(".btn-add-comment").hidden = true;
     row.querySelector(".commentary-text-input").hidden = false;
+    row.querySelector(".tag-editor").hidden = false;
     row.querySelector(".commentary-save-actions").hidden = false;
 
     const target = focusTitle
@@ -696,6 +759,7 @@ SC.App = (function () {
           enText: SC.UI.stripTags(enLines[i] || ""),
           title: c ? c.title || "" : "",
           text: c ? c.text || "" : "",
+          tags: c ? c.tags || [] : [],
           updatedAt: c ? c.updatedAt || 0 : 0,
         });
       });
@@ -718,6 +782,7 @@ SC.App = (function () {
           enText: "",
           title: c ? c.title || "" : "",
           text: c ? c.text || "" : "",
+          tags: c ? c.tags || [] : [],
           updatedAt: c ? c.updatedAt || 0 : 0,
         });
       });
@@ -850,6 +915,11 @@ SC.App = (function () {
       }
       if (entry.text) {
         children.push(rightPara({ children: [new TextRun(entry.text)] }));
+      }
+      if (entry.tags && entry.tags.length) {
+        children.push(
+          rightPara({ children: [new TextRun({ text: "תגיות: " + entry.tags.join(", "), italics: true })] })
+        );
       }
       children.push(rightPara({ text: "" }));
     });
