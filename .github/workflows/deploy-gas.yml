@@ -1,0 +1,57 @@
+name: Deploy Apps Script
+
+# Independent of the GitHub Pages deployment (which is the classic
+# branch-based kind, not Actions-based, and reads only docs/) - this
+# workflow can never affect it either way. Runs only when gas/ actually
+# changes, so ordinary app.js/README/etc. commits never trigger it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "gas/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-gas
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Authenticate clasp
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::error::CLASP_CREDENTIALS secret is not set - see gas/README.md for one-time setup."
+            exit 1
+          fi
+          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+
+      - name: Push latest code to the Apps Script project
+        working-directory: gas
+        run: clasp push --force
+
+      - name: Republish the existing deployment (same /exec URL, new code)
+        working-directory: gas
+        env:
+          DEPLOYMENT_ID: ${{ vars.CLASP_DEPLOYMENT_ID }}
+        run: |
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "::error::CLASP_DEPLOYMENT_ID repo variable is not set - see gas/README.md for one-time setup."
+            exit 1
+          fi
+          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "Auto-deploy ${{ github.sha }}"
