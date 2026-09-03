@@ -58,7 +58,7 @@ function doPost(e) {
   );
 }
 
-var COMMENTARY_COLUMNS = ["Ref", "Title", "Comment", "Source (He)", "Source (En)", "Updated At"];
+var COMMENTARY_COLUMNS = ["Ref", "Title", "Comment", "Source (He)", "Source (En)", "Updated At", "Tags"];
 
 function getOrCreateSheet(book) {
   var ss;
@@ -123,6 +123,7 @@ function handleSync(payload) {
           entry.heText || "",
           entry.enText || "",
           new Date(entry.updatedAt).toISOString(),
+          (entry.tags || []).join(", "),
         ],
       ]);
   });
@@ -153,6 +154,16 @@ function handleGetCommentary(payload) {
         heText: row[3],
         enText: row[4],
         updatedAt: row[5] ? new Date(row[5]).getTime() : 0,
+        tags: row[6]
+          ? String(row[6])
+              .split(",")
+              .map(function (t) {
+                return t.trim();
+              })
+              .filter(function (t) {
+                return t;
+              })
+          : [],
       };
     });
   return { entries: entries };
@@ -198,6 +209,9 @@ function handleExport(payload) {
     }
     if (entry.text) {
       appendRightParagraph(body, entry.text);
+    }
+    if (entry.tags && entry.tags.length) {
+      appendRightParagraph(body, "תגיות: " + entry.tags.join(", ")).setItalic(true);
     }
     appendRightParagraph(body, "");
   });

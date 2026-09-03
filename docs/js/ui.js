@@ -131,6 +131,11 @@ SC.UI = (function () {
         <div class="verse-commentary-row">
           <div class="commentary-view" ${existing?.text ? "" : "hidden"}>
             <div class="commentary-text">${linkify(escapeHtml(existing?.text || ""))}</div>
+            ${
+              existing?.tags?.length
+                ? `<div class="tag-chip-list-view">${existing.tags.map((t) => `<span class="tag-chip">${escapeHtml(t)}</span>`).join("")}</div>`
+                : ""
+            }
             <div class="commentary-actions">
               <button type="button" class="link-btn btn-edit-comment">עריכה</button>
               <button type="button" class="link-btn btn-delete-comment">מחיקה</button>
@@ -138,6 +143,19 @@ SC.UI = (function () {
           </div>
           <button type="button" class="link-btn btn-add-comment" ${existing?.text ? "hidden" : ""}>+ הוספת פרשנות</button>
           <textarea class="commentary-text-input" placeholder="כתבו את הפרשנות כאן..." rows="10" hidden>${existing?.text || ""}</textarea>
+          <div class="tag-editor" hidden>
+            <div class="tag-chip-list">${(existing?.tags || [])
+              .map(
+                (t) =>
+                  `<span class="tag-chip" data-tag="${escapeAttr(t)}"><span>${escapeHtml(t)}</span><button type="button" class="tag-chip-remove">×</button></span>`
+              )
+              .join("")}</div>
+            <select class="tag-select">
+              <option value="">+ הוספת תגית</option>
+              ${(book.tags || []).map((t) => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join("")}
+              <option value="__new__">➕ תגית חדשה...</option>
+            </select>
+          </div>
           <div class="row-actions commentary-save-actions" hidden>
             <button type="submit" class="primary">שמירה</button>
             <button type="button" class="secondary btn-cancel-comment">ביטול</button>
