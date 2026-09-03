@@ -100,6 +100,8 @@ From then on:
 - Once created, links to open the book's Sheet and Doc appear on its reader screen
 - Deleting a book from the app also trashes its linked Sheet and Doc in Drive
 
+**Updating `Code.gs` later:** by default this means redoing steps 2 and 3 above (copy/paste + redeploy). If you'd rather it happen automatically whenever `gas/Code.gs` changes, see [`gas/README.md`](gas/README.md) for an optional GitHub Actions workflow that does it via `clasp` - one-time setup, then it's hands-off.
+
 ## Project Structure
 
 ```
