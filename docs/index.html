@@ -97,6 +97,22 @@
           </form>
         </details>
       </details>
+
+      <details class="scope-add">
+        <summary>ייבוא ספר מקומי (לא מספריא)</summary>
+        <p class="muted">
+          לספר שכתבתם/הכנתם בעצמכם, בקובץ Markdown: כותרות פרקים כ-<code>## פרק א. שם הפרק</code>,
+          וכל פסקה כ-<code>**א.** טקסט הפסקה</code> - שורה נפרדת לכל פסקה. הספר, הפרשנות עליו, וקישור
+          המקור (אם צוין) נשארים כולם מקומיים ומוצפנים באותה מידה כמו ספר מספריא.
+        </p>
+        <form id="form-import-custom" autocomplete="off">
+          <label>
+            קובץ הספר (.md)
+            <input type="file" id="input-custom-file" accept=".md,.txt,text/markdown,text/plain" />
+          </label>
+          <button type="submit" class="secondary">ייבוא</button>
+        </form>
+      </details>
     </div>
 
     <ul id="book-list" class="book-list"></ul>
@@ -208,6 +224,7 @@
 <div id="toast" class="toast" hidden></div>
 
 <script src="js/vendor/docx.min.js"></script>
+<script src="js/customBook.js"></script>
 <script src="js/version.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>

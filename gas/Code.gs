@@ -193,7 +193,7 @@ function handleExport(payload) {
     if (entry.heText) {
       appendRightParagraph(body, entry.heText);
     }
-    if (entry.ref) {
+    if (entry.ref && entry.ref.indexOf("custom:") !== 0) {
       appendSefariaLink(body, entry.ref);
     }
     if (entry.text) {
