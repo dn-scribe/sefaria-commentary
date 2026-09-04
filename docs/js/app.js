@@ -356,6 +356,7 @@ SC.App = (function () {
           ? customChapterToSection(book, book.currentChapterIndex || 0)
           : await SC.Api.getSection(book.currentRef || book.title);
       renderCurrentSection();
+      window.scrollTo(0, 0);
       SC.UI.showScreen("reader");
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
@@ -365,7 +366,7 @@ SC.App = (function () {
     // durable cross-device copy. Pull it back on open so commentary written
     // elsewhere shows up here too - render first so opening never blocks on it.
     const changed = await pullCommentary(book);
-    if (changed && currentBook === book) renderCurrentSection();
+    if (changed && currentBook === book) renderCurrentSectionPreservingScroll();
   }
 
   async function pullCommentary(book) {
@@ -412,9 +413,17 @@ SC.App = (function () {
     $("btn-open-sefaria").hidden = currentBook.source === "custom";
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
-    // Every navigation (next/prev/home) re-renders through here - always
-    // land back at the top of the page rather than wherever was scrolled to.
-    window.scrollTo(0, 0);
+  }
+
+  // Rebuilding #reader-content (innerHTML="" then re-appending every row)
+  // makes the browser clamp/drift the scroll position on its own, even with
+  // no explicit scrollTo call - so for edits that shouldn't move the page
+  // (save/cancel/delete), capture and re-assert the position rather than
+  // just avoiding a reset.
+  function renderCurrentSectionPreservingScroll() {
+    const y = window.scrollY;
+    renderCurrentSection();
+    window.scrollTo(0, y);
   }
 
   async function goSection(direction) {
@@ -430,6 +439,7 @@ SC.App = (function () {
       currentSection = customChapterToSection(currentBook, nextIdx);
       await persist();
       renderCurrentSection();
+      window.scrollTo(0, 0);
       scheduleBookListSync();
       return;
     }
@@ -447,6 +457,7 @@ SC.App = (function () {
       currentSection = section;
       await persist();
       renderCurrentSection();
+      window.scrollTo(0, 0);
       scheduleBookListSync();
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
@@ -468,6 +479,7 @@ SC.App = (function () {
       currentSection = customChapterToSection(currentBook, 0);
       await persist();
       renderCurrentSection();
+      window.scrollTo(0, 0);
       scheduleBookListSync();
       return;
     }
@@ -481,6 +493,7 @@ SC.App = (function () {
       currentSection = section;
       await persist();
       renderCurrentSection();
+      window.scrollTo(0, 0);
       scheduleBookListSync();
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
@@ -505,7 +518,7 @@ SC.App = (function () {
       ) {
         enterEditMode(row, e.target.classList.contains("btn-add-title") || e.target.classList.contains("btn-edit-title"));
       } else if (e.target.classList.contains("btn-cancel-comment")) {
-        renderCurrentSection();
+        renderCurrentSectionPreservingScroll();
       } else if (e.target.classList.contains("btn-delete-comment")) {
         deleteComment(row.dataset.ref);
       } else if (e.target.classList.contains("tag-chip-remove")) {
@@ -607,7 +620,7 @@ SC.App = (function () {
     state.commentary[bookId] = state.commentary[bookId] || {};
     state.commentary[bookId][ref] = { ...data, updatedAt: Date.now() };
     await persist();
-    renderCurrentSection();
+    renderCurrentSectionPreservingScroll();
     SC.UI.toast("נשמר");
     syncToSheet();
   }
@@ -616,7 +629,7 @@ SC.App = (function () {
     const bookId = currentBook.id;
     if (state.commentary[bookId]) delete state.commentary[bookId][ref];
     await persist();
-    renderCurrentSection();
+    renderCurrentSectionPreservingScroll();
     syncToSheet();
   }
 
