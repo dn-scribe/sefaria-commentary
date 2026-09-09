@@ -71,7 +71,10 @@ SC.App = (function () {
 
   // ---------- Books ----------
   function renderBookListOnly() {
-    SC.UI.renderBooks(state.books, { onOpen: openBook, onDelete: deleteBook });
+    // Most recently opened first; books never opened yet keep their
+    // original (creation) order, after all the ones that have been.
+    const sorted = [...state.books].sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+    SC.UI.renderBooks(sorted, { onOpen: openBook, onDelete: deleteBook });
   }
 
   async function goToBooks() {
@@ -362,6 +365,10 @@ SC.App = (function () {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
       return;
     }
+    book.lastOpenedAt = Date.now();
+    book.updatedAt = Date.now();
+    await persist();
+    scheduleBookListSync();
     // Local storage is per-device; the Sheet (written on every save) is the
     // durable cross-device copy. Pull it back on open so commentary written
     // elsewhere shows up here too - render first so opening never blocks on it.

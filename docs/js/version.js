@@ -3,9 +3,17 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.8.0";
+SC.APP_VERSION = "1.9.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.9.0",
+    date: "2026-09-09",
+    changes: [
+      "רשימת הספרים ממוינת כך שהספר שנפתח לאחרונה עולה לראש הרשימה",
+      "תיקון: שמירה/ביטול/מחיקה של פרשנות גללו את העמוד לראש בטעות - המיקום נשמר כעת",
+    ],
+  },
   {
     version: "1.8.0",
     date: "2026-09-03",
