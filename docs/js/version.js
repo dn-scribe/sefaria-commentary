@@ -3,9 +3,16 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.9.0";
+SC.APP_VERSION = "1.9.1";
 
 SC.CHANGELOG = [
+  {
+    version: "1.9.1",
+    date: "2026-09-18",
+    changes: [
+      "תיקון: הוספת ספרים מורכבים (המחולקים לפרקים בשם ולא במספור רציף, כמו \"תלמוד מהו?\") נכשלה",
+    ],
+  },
   {
     version: "1.9.0",
     date: "2026-09-09",
