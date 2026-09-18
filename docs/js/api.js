@@ -17,7 +17,14 @@ SC.Api = (function () {
     if (!res.ok) throw new Error("Book not found on Sefaria");
     const json = await res.json();
     const bookTitle = json.title || title;
-    const firstRef = await getFirstSectionRef(bookTitle);
+    // A "complex text" (e.g. a book organized into named sections like
+    // "Introduction"/"Chapter I" rather than one sequential numbering) has
+    // no single top-level ref to fetch - /api/texts/<book title> 400s for
+    // those. Walk the schema down to the first leaf section instead.
+    const isComplex = json.schema && json.schema.nodes && json.schema.nodes.length > 0;
+    const firstRef = isComplex
+      ? firstLeafRef(bookTitle, json.schema)
+      : await getFirstSectionRef(bookTitle);
     // A second lookup for the Hebrew label of that specific starting
     // section (the book-level response's heRef doesn't match it).
     const firstSection = await getSection(firstRef);
@@ -27,6 +34,16 @@ SC.Api = (function () {
       firstRef: firstSection.ref,
       firstHeRef: firstSection.heRef,
     };
+  }
+
+  function firstLeafRef(bookTitle, schemaNode) {
+    const path = [];
+    let node = schemaNode;
+    while (node.nodes && node.nodes.length) {
+      node = node.nodes[0];
+      path.push(node.title || node.key);
+    }
+    return [bookTitle, ...path].join(", ");
   }
 
   async function getFirstSectionRef(title) {
