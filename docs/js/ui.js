@@ -207,6 +207,9 @@ SC.UI = (function () {
       .replace(/<i class="footnote">.*?<\/i>/gi, "")
       .replace(/<[^>]*>/g, "")
       .replace(/&nbsp;/gi, " ")
+      .replace(/&thinsp;/gi, " ")
+      .replace(/&ensp;/gi, " ")
+      .replace(/&emsp;/gi, " ")
       .replace(/&amp;/gi, "&");
   }
   function linkify(str) {
