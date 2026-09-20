@@ -150,7 +150,7 @@ SC.UI = (function () {
         <div class="verse-text">
           <span class="verse-num">${i + 1}</span>
           <span class="verse-he">${escapeHtml(stripTags(line))}</span>
-          ${enLines[i] ? `<span class="verse-en muted">${escapeHtml(stripTags(enLines[i]))}</span>` : ""}
+          ${book.showEnglish && enLines[i] ? `<span class="verse-en muted">${escapeHtml(stripTags(enLines[i]))}</span>` : ""}
         </div>
         <div class="verse-commentary-row">
           <div class="commentary-view" ${existing?.text ? "" : "hidden"}>
