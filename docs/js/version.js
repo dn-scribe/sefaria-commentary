@@ -3,9 +3,16 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.10.0";
+SC.APP_VERSION = "1.10.1";
 
 SC.CHANGELOG = [
+  {
+    version: "1.10.1",
+    date: "2026-09-20",
+    changes: [
+      "תיקון: שורות ריקות שנוספו בעריכת טקסט מקורי לא הוצגו; תיבת העריכה גדולה יותר כעת (10 שורות)",
+    ],
+  },
   {
     version: "1.10.0",
     date: "2026-09-20",

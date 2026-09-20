@@ -160,7 +160,7 @@ SC.UI = (function () {
           rawParagraphs
             ? `<div class="source-edit-row">
           <button type="button" class="link-btn btn-edit-source">עריכת הטקסט המקורי</button>
-          <textarea class="source-text-input" rows="4" hidden>${escapeHtml(rawParagraphs[i].text)}</textarea>
+          <textarea class="source-text-input" rows="10" hidden>${escapeHtml(rawParagraphs[i].text)}</textarea>
           <div class="row-actions source-edit-actions" hidden>
             <button type="button" class="primary btn-save-source">שמירה</button>
             <button type="button" class="secondary btn-cancel-source">ביטול</button>
