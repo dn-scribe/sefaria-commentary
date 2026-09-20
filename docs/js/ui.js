@@ -132,6 +132,10 @@ SC.UI = (function () {
   }
 
   function appendSectionRows(container, section, lines, enLines, commentaryMap, book) {
+    const rawParagraphs =
+      book.source === "custom" && book.customContent
+        ? book.customContent.chapters[section.chapterIndex].paragraphs
+        : null;
     lines.forEach((line, i) => {
       const ref = commentaryRefFor(section.sectionRef, i);
       const existing = commentaryMap[ref];
@@ -152,6 +156,18 @@ SC.UI = (function () {
           <span class="verse-he">${escapeHtml(stripTags(line))}</span>
           ${book.showEnglish && enLines[i] ? `<span class="verse-en muted">${escapeHtml(stripTags(enLines[i]))}</span>` : ""}
         </div>
+        ${
+          rawParagraphs
+            ? `<div class="source-edit-row">
+          <button type="button" class="link-btn btn-edit-source">עריכת הטקסט המקורי</button>
+          <textarea class="source-text-input" rows="4" hidden>${escapeHtml(rawParagraphs[i].text)}</textarea>
+          <div class="row-actions source-edit-actions" hidden>
+            <button type="button" class="primary btn-save-source">שמירה</button>
+            <button type="button" class="secondary btn-cancel-source">ביטול</button>
+          </div>
+        </div>`
+            : ""
+        }
         <div class="verse-commentary-row">
           <div class="commentary-view" ${existing?.text ? "" : "hidden"}>
             <div class="commentary-text">${linkify(escapeHtml(existing?.text || ""))}</div>

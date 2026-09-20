@@ -3,9 +3,16 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.9.4";
+SC.APP_VERSION = "1.10.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.10.0",
+    date: "2026-09-20",
+    changes: [
+      "בספרים מקומיים (שיובאו כקובץ Markdown): ניתן כעת לערוך את הטקסט המקורי של כל פסקה, בנפרד מהפרשנות",
+    ],
+  },
   {
     version: "1.9.4",
     date: "2026-09-20",
