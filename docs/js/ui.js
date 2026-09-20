@@ -94,7 +94,8 @@ SC.UI = (function () {
     return `${sectionRef}:${index + 1}`;
   }
 
-  function renderReader(book, section, commentaryMap) {
+  function renderReader(book, section, commentaryMap, extraSections) {
+    extraSections = extraSections || [];
     $("reader-book-title").textContent = book.heTitle || book.title;
     $("reader-section-title").textContent = section.heRef || section.sectionRef;
 
@@ -108,6 +109,29 @@ SC.UI = (function () {
       return;
     }
 
+    appendSectionRows(container, section, lines, enLines, commentaryMap, book);
+
+    // "עוד": sections appended below the main one via the load-more button,
+    // each under its own heading, for editing across a spot where the
+    // app's paging splits the text awkwardly. Purely a view - real
+    // navigation (next/prev/home) drops these and shows just one section.
+    extraSections.forEach((sec) => {
+      const secLines = sec.he.length ? sec.he : sec.text;
+      if (!secLines.length) return;
+      const divider = document.createElement("div");
+      divider.className = "section-divider";
+      divider.textContent = sec.heRef || sec.sectionRef;
+      container.appendChild(divider);
+      appendSectionRows(container, sec, secLines, sec.text, commentaryMap, book);
+    });
+
+    const lastSection = extraSections.length ? extraSections[extraSections.length - 1] : section;
+    document.querySelectorAll(".btn-prev-section").forEach((b) => (b.disabled = !section.prev));
+    document.querySelectorAll(".btn-next-section").forEach((b) => (b.disabled = !section.next));
+    document.querySelectorAll(".btn-load-more").forEach((b) => (b.disabled = !lastSection.next));
+  }
+
+  function appendSectionRows(container, section, lines, enLines, commentaryMap, book) {
     lines.forEach((line, i) => {
       const ref = commentaryRefFor(section.sectionRef, i);
       const existing = commentaryMap[ref];
@@ -163,9 +187,6 @@ SC.UI = (function () {
         </div>`;
       container.appendChild(row);
     });
-
-    document.querySelectorAll(".btn-prev-section").forEach((b) => (b.disabled = !section.prev));
-    document.querySelectorAll(".btn-next-section").forEach((b) => (b.disabled = !section.next));
   }
 
   function escapeHtml(str) {
