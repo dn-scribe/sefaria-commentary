@@ -3,9 +3,16 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.9.1";
+SC.APP_VERSION = "1.9.2";
 
 SC.CHANGELOG = [
+  {
+    version: "1.9.2",
+    date: "2026-09-20",
+    changes: [
+      "כפתור \"עוד\" בתחתית העמוד: טוען את הקטע הבא כהמשך לעמוד הנוכחי (לעריכה כשהחלוקה לעמודים לא תואמת את הטקסט) - הניווט הבא/הקודם/להתחלה חוזר אחר כך לעימוד הרגיל",
+    ],
+  },
   {
     version: "1.9.1",
     date: "2026-09-18",

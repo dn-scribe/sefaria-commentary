@@ -7,6 +7,11 @@ SC.App = (function () {
   let state = null;
   let currentBook = null;
   let currentSection = null;
+  // Sections appended below currentSection via the "עוד" button - a
+  // transient view-only extension, not persisted and not reflected in
+  // currentRef/currentHeRef. Any real navigation (next/prev/home/open)
+  // resets it, so pagination reverts to normal on the following page.
+  let extraSections = [];
 
   function uid() {
     return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
@@ -358,6 +363,7 @@ SC.App = (function () {
         book.source === "custom"
           ? customChapterToSection(book, book.currentChapterIndex || 0)
           : await SC.Api.getSection(book.currentRef || book.title);
+      extraSections = [];
       renderCurrentSection();
       window.scrollTo(0, 0);
       SC.UI.showScreen("reader");
@@ -406,7 +412,7 @@ SC.App = (function () {
   }
 
   function renderCurrentSection() {
-    SC.UI.renderReader(currentBook, currentSection, state.commentary[currentBook.id] || {});
+    SC.UI.renderReader(currentBook, currentSection, state.commentary[currentBook.id] || {}, extraSections);
     if (currentBook.scopeRef) {
       if (currentSection.next && !isWithinScope(currentSection.next, currentBook.scopeRef)) {
         document.querySelectorAll(".btn-next-section").forEach((b) => (b.disabled = true));
@@ -414,6 +420,10 @@ SC.App = (function () {
       if (currentSection.prev && !isWithinScope(currentSection.prev, currentBook.scopeRef)) {
         document.querySelectorAll(".btn-prev-section").forEach((b) => (b.disabled = true));
       }
+    }
+    const lastSection = extraSections.length ? extraSections[extraSections.length - 1] : currentSection;
+    if (lastSection.next && currentBook.scopeRef && !isWithinScope(lastSection.next, currentBook.scopeRef)) {
+      document.querySelectorAll(".btn-load-more").forEach((b) => (b.disabled = true));
     }
     // A custom book isn't a single Sefaria ref, so there's nothing for this
     // button to open - hide it rather than link somewhere wrong.
@@ -444,6 +454,7 @@ SC.App = (function () {
       currentBook.currentHeRef = chapters[nextIdx].title;
       currentBook.updatedAt = Date.now();
       currentSection = customChapterToSection(currentBook, nextIdx);
+      extraSections = [];
       await persist();
       renderCurrentSection();
       window.scrollTo(0, 0);
@@ -462,10 +473,38 @@ SC.App = (function () {
       currentBook.currentHeRef = section.heRef;
       currentBook.updatedAt = Date.now();
       currentSection = section;
+      extraSections = [];
       await persist();
       renderCurrentSection();
       window.scrollTo(0, 0);
       scheduleBookListSync();
+    } catch (err) {
+      SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
+    }
+  }
+
+  // Appends the next section below the current one instead of replacing it
+  // (the "עוד" button) - for editing across a spot where the app's paging
+  // splits the text awkwardly and both parts need to be visible together.
+  // Purely a view: not persisted, and any real navigation drops it.
+  async function loadMoreSection() {
+    const last = extraSections.length ? extraSections[extraSections.length - 1] : currentSection;
+    if (!last.next) return;
+
+    if (currentBook.source === "custom") {
+      const chapters = currentBook.customContent.chapters;
+      const nextIdx = (currentBook.currentChapterIndex || 0) + extraSections.length + 1;
+      if (nextIdx >= chapters.length) return;
+      extraSections.push(customChapterToSection(currentBook, nextIdx));
+      renderCurrentSectionPreservingScroll();
+      return;
+    }
+
+    if (!isWithinScope(last.next, currentBook.scopeRef)) return;
+    try {
+      const section = await SC.Api.getSection(last.next);
+      extraSections.push(section);
+      renderCurrentSectionPreservingScroll();
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בטעינת הטקסט", true);
     }
@@ -484,6 +523,7 @@ SC.App = (function () {
       currentBook.currentHeRef = currentBook.customContent.chapters[0].title;
       currentBook.updatedAt = Date.now();
       currentSection = customChapterToSection(currentBook, 0);
+      extraSections = [];
       await persist();
       renderCurrentSection();
       window.scrollTo(0, 0);
@@ -498,6 +538,7 @@ SC.App = (function () {
       currentBook.currentHeRef = section.heRef;
       currentBook.updatedAt = Date.now();
       currentSection = section;
+      extraSections = [];
       await persist();
       renderCurrentSection();
       window.scrollTo(0, 0);
@@ -511,6 +552,7 @@ SC.App = (function () {
     $("btn-back-to-books").onclick = goToBooks;
     document.querySelectorAll(".btn-prev-section").forEach((b) => (b.onclick = () => goSection("prev")));
     document.querySelectorAll(".btn-next-section").forEach((b) => (b.onclick = () => goSection("next")));
+    document.querySelectorAll(".btn-load-more").forEach((b) => (b.onclick = () => loadMoreSection()));
     $("btn-home-section").onclick = goHome;
 
     $("reader-content").addEventListener("click", (e) => {
