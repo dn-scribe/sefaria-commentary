@@ -3,9 +3,14 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.9.2";
+SC.APP_VERSION = "1.9.3";
 
 SC.CHANGELOG = [
+  {
+    version: "1.9.3",
+    date: "2026-09-20",
+    changes: ["תיקון: תווים כמו &thinsp; בטקסט ממקור ספריא הוצגו כטקסט גולמי במקום כרווח"],
+  },
   {
     version: "1.9.2",
     date: "2026-09-20",
