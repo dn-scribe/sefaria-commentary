@@ -184,7 +184,7 @@ button.link-btn { background: none; border: none; color: var(--accent); padding:
 
 .verse-text { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.4rem; }
 .verse-num { color: var(--accent); font-weight: bold; font-size: 0.8rem; }
-.verse-he { font-size: 1.15rem; line-height: 1.7; }
+.verse-he { font-size: 1.15rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
 .verse-en { font-size: 0.85rem; direction: ltr; text-align: left; }
 
 .verse-commentary-row { margin-top: 0.4rem; }
