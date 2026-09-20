@@ -3,9 +3,16 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.9.3";
+SC.APP_VERSION = "1.9.4";
 
 SC.CHANGELOG = [
+  {
+    version: "1.9.4",
+    date: "2026-09-20",
+    changes: [
+      "תיבת סימון בעת הוספת ספר: כלילת טקסט באנגלית לצד העברית - כברירת מחדל כבוי (עברית בלבד)",
+    ],
+  },
   {
     version: "1.9.3",
     date: "2026-09-20",
