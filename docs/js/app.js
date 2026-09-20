@@ -321,12 +321,30 @@ SC.App = (function () {
       ref,
       heRef: chapter.title,
       sectionRef: ref,
+      chapterIndex,
       next: chapterIndex < chapters.length - 1 ? `custom:${book.id}:${chapterIndex + 1}` : null,
       prev: chapterIndex > 0 ? `custom:${book.id}:${chapterIndex - 1}` : null,
       he: chapter.paragraphs.map((p) => `${p.letter}. ${p.text}`),
       text: [],
       book: book.title,
     };
+  }
+
+  // "custom:<bookId>:<chapterIndex>:<n>" (n = paragraph position, 1-based) -
+  // pulls out where in customContent a given row's ref points, regardless of
+  // whether that row is on the current section or one appended via "עוד".
+  function parseCustomParagraphRef(ref) {
+    const parts = ref.split(":");
+    return { chapterIndex: parseInt(parts[2], 10), paragraphIndex: parseInt(parts[3], 10) - 1 };
+  }
+
+  // Re-derives currentSection/extraSections from customContent after an
+  // edit to a custom book's source text, so the reader shows the new text
+  // without a real navigation (which would drop any "עוד"-appended pages).
+  function refreshCustomSections() {
+    if (currentBook.source !== "custom") return;
+    currentSection = customChapterToSection(currentBook, currentSection.chapterIndex);
+    extraSections = extraSections.map((s) => customChapterToSection(currentBook, s.chapterIndex));
   }
 
   // Prefix match on a canonical ref, requiring a word boundary (":" or " ")
@@ -574,6 +592,13 @@ SC.App = (function () {
         deleteComment(row.dataset.ref);
       } else if (e.target.classList.contains("tag-chip-remove")) {
         e.target.closest(".tag-chip").remove();
+      } else if (e.target.classList.contains("btn-edit-source")) {
+        enterSourceEditMode(row);
+      } else if (e.target.classList.contains("btn-cancel-source")) {
+        renderCurrentSectionPreservingScroll();
+      } else if (e.target.classList.contains("btn-save-source")) {
+        const text = row.querySelector(".source-text-input").value.trim();
+        saveSourceText(row.dataset.ref, text);
       }
     });
 
@@ -682,6 +707,32 @@ SC.App = (function () {
     await persist();
     renderCurrentSectionPreservingScroll();
     syncToSheet();
+  }
+
+  function enterSourceEditMode(row) {
+    row.querySelector(".verse-he").hidden = true;
+    row.querySelector(".btn-edit-source").hidden = true;
+    row.querySelector(".source-text-input").hidden = false;
+    row.querySelector(".source-edit-actions").hidden = false;
+    row.querySelector(".source-text-input").focus();
+  }
+
+  // Edits a custom book's own source paragraph text (only ever applies to
+  // source === "custom" books - the row's edit-source control only exists
+  // for those to begin with). Commentary on the same ref is untouched.
+  async function saveSourceText(ref, text) {
+    if (!text) {
+      SC.UI.toast("הטקסט לא יכול להיות ריק", true);
+      return;
+    }
+    const { chapterIndex, paragraphIndex } = parseCustomParagraphRef(ref);
+    currentBook.customContent.chapters[chapterIndex].paragraphs[paragraphIndex].text = text;
+    currentBook.updatedAt = Date.now();
+    await persist();
+    refreshCustomSections();
+    renderCurrentSectionPreservingScroll();
+    SC.UI.toast("נשמר");
+    scheduleBookListSync();
   }
 
   // ---------- Google sync / export ----------
