@@ -689,7 +689,7 @@ SC.App = (function () {
 
   async function saveComment(ref, data) {
     if (!data.text && !data.title) {
-      SC.UI.toast("נא להזין כותרת או טקסט פרשנות", true);
+      await deleteComment(ref);
       return;
     }
     const bookId = currentBook.id;
@@ -706,6 +706,7 @@ SC.App = (function () {
     if (state.commentary[bookId]) delete state.commentary[bookId][ref];
     await persist();
     renderCurrentSectionPreservingScroll();
+    SC.UI.toast("נמחק");
     syncToSheet();
   }
 

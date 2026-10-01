@@ -3,9 +3,17 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.10.1";
+SC.APP_VERSION = "1.11.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.11.0",
+    date: "2026-10-01",
+    changes: [
+      "שמירת פרשנות ריקה (בלי כותרת ובלי טקסט) מוחקת אותה כעת, במקום להציג שגיאה",
+      "כפתור מחיקה נוסף גם ליד כותרת פרשנות ללא טקסט - מוחק כותרת וטקסט יחד",
+    ],
+  },
   {
     version: "1.10.1",
     date: "2026-09-20",

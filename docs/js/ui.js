@@ -147,6 +147,7 @@ SC.UI = (function () {
           <div class="title-view" ${existing?.title ? "" : "hidden"}>
             <strong>${escapeHtml(existing?.title || "")}</strong>
             <button type="button" class="link-btn btn-edit-title">עריכה</button>
+            ${existing?.text ? "" : '<button type="button" class="link-btn btn-delete-comment">מחיקה</button>'}
           </div>
           <button type="button" class="link-btn btn-add-title" ${existing?.title ? "hidden" : ""}>+ הוספת כותרת</button>
           <input type="text" class="commentary-title-input" placeholder="כותרת הקטע" value="${escapeAttr(existing?.title || "")}" hidden />
