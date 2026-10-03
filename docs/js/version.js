@@ -3,9 +3,17 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.11.0";
+SC.APP_VERSION = "1.12.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.12.0",
+    date: "2026-10-03",
+    changes: [
+      "רשימת הספרים: לשונית \"ארכיון\" - אפשר להעביר ספר לארכיון ולשחזר אותו חזרה",
+      "אפשר לערוך את שם הספר (כפתור \"שינוי שם\" ברשימה)",
+    ],
+  },
   {
     version: "1.11.0",
     date: "2026-10-01",
