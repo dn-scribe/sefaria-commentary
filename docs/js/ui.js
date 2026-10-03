@@ -68,10 +68,12 @@ SC.UI = (function () {
       .join("");
   }
 
-  function renderBooks(books, handlers) {
+  function renderBooks(books, handlers, tab, totalCount) {
     const list = $("book-list");
     list.innerHTML = "";
-    $("empty-state").hidden = books.length > 0;
+    $("empty-state").hidden = totalCount > 0;
+    $("archive-empty").hidden = !(tab === "archived" && books.length === 0);
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
     books.forEach((book) => {
       const li = document.createElement("li");
       li.className = "book-item";
@@ -82,8 +84,12 @@ SC.UI = (function () {
         </div>
         <div class="book-actions">
           <button class="secondary btn-open">פתיחה</button>
+          <button class="secondary btn-rename">שינוי שם</button>
+          <button class="secondary btn-archive">${book.archived ? "שחזור מהארכיון" : "העברה לארכיון"}</button>
           <button class="danger btn-delete">מחיקה</button>
         </div>`;
+      li.querySelector(".btn-rename").addEventListener("click", () => handlers.onRename(book));
+      li.querySelector(".btn-archive").addEventListener("click", () => handlers.onToggleArchive(book));
       li.querySelector(".btn-open").addEventListener("click", () => handlers.onOpen(book));
       li.querySelector(".btn-delete").addEventListener("click", () => handlers.onDelete(book));
       list.appendChild(li);
@@ -147,6 +153,7 @@ SC.UI = (function () {
           <div class="title-view" ${existing?.title ? "" : "hidden"}>
             <strong>${escapeHtml(existing?.title || "")}</strong>
             <button type="button" class="link-btn btn-edit-title">עריכה</button>
+            ${existing?.text ? "" : '<button type="button" class="link-btn btn-delete-comment">מחיקה</button>'}
           </div>
           <button type="button" class="link-btn btn-add-title" ${existing?.title ? "hidden" : ""}>+ הוספת כותרת</button>
           <input type="text" class="commentary-title-input" placeholder="כותרת הקטע" value="${escapeAttr(existing?.title || "")}" hidden />

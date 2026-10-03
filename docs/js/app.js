@@ -75,11 +75,49 @@ SC.App = (function () {
   }
 
   // ---------- Books ----------
+  let bookListTab = "active";
+
   function renderBookListOnly() {
     // Most recently opened first; books never opened yet keep their
     // original (creation) order, after all the ones that have been.
-    const sorted = [...state.books].sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
-    SC.UI.renderBooks(sorted, { onOpen: openBook, onDelete: deleteBook });
+    const showArchived = bookListTab === "archived";
+    const sorted = state.books
+      .filter((b) => !!b.archived === showArchived)
+      .sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+    SC.UI.renderBooks(
+      sorted,
+      { onOpen: openBook, onDelete: deleteBook, onRename: renameBook, onToggleArchive: toggleArchiveBook },
+      bookListTab,
+      state.books.length
+    );
+  }
+
+  async function toggleArchiveBook(book) {
+    book.archived = !book.archived;
+    book.updatedAt = Date.now();
+    await persist();
+    renderBookListOnly();
+    SC.UI.toast(book.archived ? "הועבר לארכיון" : "שוחזר מהארכיון");
+    scheduleBookListSync();
+  }
+
+  // Only the display name changes - book.title is the Sefaria lookup key
+  // for live books, so it stays as is.
+  async function renameBook(book) {
+    const name = prompt("שם הספר:", book.heTitle || book.title);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      SC.UI.toast("שם הספר לא יכול להיות ריק", true);
+      return;
+    }
+    if (trimmed === book.heTitle) return;
+    book.heTitle = trimmed;
+    book.updatedAt = Date.now();
+    await persist();
+    renderBookListOnly();
+    SC.UI.toast("השם עודכן");
+    scheduleBookListSync();
   }
 
   async function goToBooks() {
@@ -574,6 +612,12 @@ SC.App = (function () {
     document.querySelectorAll(".btn-next-section").forEach((b) => (b.onclick = () => goSection("next")));
     document.querySelectorAll(".btn-load-more").forEach((b) => (b.onclick = () => loadMoreSection()));
     $("btn-home-section").onclick = goHome;
+    document.querySelectorAll(".tab-btn").forEach((b) => {
+      b.onclick = () => {
+        bookListTab = b.dataset.tab;
+        renderBookListOnly();
+      };
+    });
 
     $("reader-content").addEventListener("click", (e) => {
       const row = e.target.closest(".verse-row");
@@ -689,7 +733,7 @@ SC.App = (function () {
 
   async function saveComment(ref, data) {
     if (!data.text && !data.title) {
-      SC.UI.toast("נא להזין כותרת או טקסט פרשנות", true);
+      await deleteComment(ref);
       return;
     }
     const bookId = currentBook.id;
@@ -706,6 +750,7 @@ SC.App = (function () {
     if (state.commentary[bookId]) delete state.commentary[bookId][ref];
     await persist();
     renderCurrentSectionPreservingScroll();
+    SC.UI.toast("נמחק");
     syncToSheet();
   }
 
