@@ -168,7 +168,18 @@ button.link-btn { background: none; border: none; color: var(--accent); padding:
   border-radius: 6px;
   padding: 0.05rem 0.4rem;
 }
-.book-actions { display: flex; gap: 0.4rem; }
+.book-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.tabs { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+}
+.tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: bold; }
 
 .reader-content { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1rem; }
 
