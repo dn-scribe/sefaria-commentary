@@ -436,6 +436,12 @@ SC.App = (function () {
     // Local storage is per-device; the Sheet (written on every save) is the
     // durable cross-device copy. Pull it back on open so commentary written
     // elsewhere shows up here too - render first so opening never blocks on it.
+    // A book first seen via the book list can lack the sheet link if the other
+    // device created the sheet after this one last synced - fetch it now.
+    if (state.settings.gasUrl && !book.sheetId) {
+      await syncBookList();
+      book = state.books.find((b) => b.id === book.id) || book;
+    }
     const changed = await pullCommentary(book);
     if (changed && currentBook === book) renderCurrentSectionPreservingScroll();
   }
@@ -781,27 +787,32 @@ SC.App = (function () {
   }
 
   // ---------- Google sync / export ----------
+  // One sync at a time per book, always sending the latest entries: two
+  // overlapping first syncs (no sheetId yet) would each create their own
+  // Sheet, leaving the linked one with only the first comment(s).
+  const sheetSyncChains = {};
   function syncToSheet() {
     if (!state.settings.gasUrl) return;
     const book = currentBook;
-    const entries = sortedEntries(book.id);
-    SC.Api
-      .callGas(state.settings.gasUrl, {
-        action: "sync",
-        book: bookRef(book),
-        entries,
-      })
-      .then((res) => {
-        if (res.sheetId && !book.sheetId) {
-          book.sheetId = res.sheetId;
-          book.sheetUrl = res.sheetUrl;
-          book.updatedAt = Date.now();
-          persist();
-          if (currentBook === book) updateExportLink();
-          scheduleBookListSync();
-        }
-      })
-      .catch((err) => console.warn("Sheet sync failed", err));
+    const run = () =>
+      SC.Api
+        .callGas(state.settings.gasUrl, {
+          action: "sync",
+          book: bookRef(book),
+          entries: sortedEntries(book.id),
+        })
+        .then((res) => {
+          if (res.sheetId && !book.sheetId) {
+            book.sheetId = res.sheetId;
+            book.sheetUrl = res.sheetUrl;
+            book.updatedAt = Date.now();
+            persist();
+            if (currentBook === book) updateExportLink();
+            scheduleBookListSync();
+          }
+        })
+        .catch((err) => console.warn("Sheet sync failed", err));
+    sheetSyncChains[book.id] = (sheetSyncChains[book.id] || Promise.resolve()).then(run);
   }
 
   // ---------- Book list sync (cross-device) ----------
@@ -857,7 +868,20 @@ SC.App = (function () {
       finalBooks.push(b);
     });
 
+    // Whichever side wins on updatedAt, never drop the Sheet/Doc link the
+    // other side has - a stale device that merely opened the book (bumping
+    // its updatedAt) must not wipe the link another device created.
+    const LINK_KEYS = ["sheetId", "sheetUrl", "docId", "docUrl"];
+    finalBooks.forEach((b) => {
+      const other = remoteBooks.find((rb) => rb.id === b.id);
+      if (!other || other === b) return;
+      LINK_KEYS.forEach((k) => {
+        if (!b[k] && other[k]) b[k] = other[k];
+      });
+    });
+
     state.books = finalBooks;
+    if (currentBook) currentBook = finalBooks.find((b) => b.id === currentBook.id) || currentBook;
     finalBooks.forEach((b) => {
       if (!state.commentary[b.id]) state.commentary[b.id] = {};
     });
