@@ -625,6 +625,20 @@ SC.App = (function () {
       };
     });
 
+    // Tapping a word in an editing textarea (source text or comment) moves
+    // the caret to the beginning of that word. Range selections are left alone.
+    $("reader-content").addEventListener("click", (e) => {
+      const ta = e.target;
+      if (!ta.matches || !ta.matches(".source-text-input, .commentary-text-input")) return;
+      if (ta.selectionStart !== ta.selectionEnd) return;
+      const pos = ta.selectionStart;
+      const text = ta.value;
+      if (/\s/.test(text.charAt(pos)) && (pos === 0 || /\s/.test(text.charAt(pos - 1)))) return;
+      let start = pos;
+      while (start > 0 && !/\s/.test(text.charAt(start - 1))) start--;
+      ta.setSelectionRange(start, start);
+    });
+
     $("reader-content").addEventListener("click", (e) => {
       const row = e.target.closest(".verse-row");
       if (!row) return;
