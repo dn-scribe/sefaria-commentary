@@ -3,9 +3,17 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.12.1";
+SC.APP_VERSION = "1.13.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.13.0",
+    date: "2026-10-18",
+    changes: [
+      "הקשה על מילה בעריכת טקסט/פרשנות מזיזה את הסמן לתחילת המילה; הקשה כפולה מזיזה אותו לסוף המילה",
+      "תמיכה בהדגשה בסגנון Markdown בפרשנות: **טקסט** מוצג מודגש",
+    ],
+  },
   {
     version: "1.12.1",
     date: "2026-10-03",
