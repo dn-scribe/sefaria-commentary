@@ -626,7 +626,7 @@ SC.App = (function () {
     });
 
     // Tapping a word in an editing textarea (source text or comment) moves
-    // the caret to the beginning of that word. Range selections are left alone.
+    // the caret to the beginning of that word (double tap: the end). Range selections are left alone.
     $("reader-content").addEventListener("click", (e) => {
       const ta = e.target;
       if (!ta.matches || !ta.matches(".source-text-input, .commentary-text-input")) return;
@@ -637,6 +637,18 @@ SC.App = (function () {
       let start = pos;
       while (start > 0 && !/\s/.test(text.charAt(start - 1))) start--;
       ta.setSelectionRange(start, start);
+    });
+
+    // Double tap selects the word natively; collapse the caret to its end.
+    $("reader-content").addEventListener("dblclick", (e) => {
+      const ta = e.target;
+      if (!ta.matches || !ta.matches(".source-text-input, .commentary-text-input")) return;
+      setTimeout(() => {
+        const text = ta.value;
+        let end = ta.selectionEnd;
+        while (end > ta.selectionStart && /\s/.test(text.charAt(end - 1))) end--;
+        ta.setSelectionRange(end, end);
+      }, 0);
     });
 
     $("reader-content").addEventListener("click", (e) => {

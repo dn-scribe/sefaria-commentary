@@ -177,7 +177,7 @@ SC.UI = (function () {
         }
         <div class="verse-commentary-row">
           <div class="commentary-view" ${existing?.text ? "" : "hidden"}>
-            <div class="commentary-text">${linkify(escapeHtml(existing?.text || ""))}</div>
+            <div class="commentary-text">${linkify(mdBold(escapeHtml(existing?.text || "")))}</div>
             ${
               existing?.tags?.length
                 ? `<div class="tag-chip-list-view">${existing.tags.map((t) => `<span class="tag-chip">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -234,6 +234,10 @@ SC.UI = (function () {
       .replace(/&ensp;/gi, " ")
       .replace(/&emsp;/gi, " ")
       .replace(/&amp;/gi, "&");
+  }
+  // Markdown bold: **text** (input must already be HTML-escaped).
+  function mdBold(str) {
+    return str.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>");
   }
   function linkify(str) {
     return str.replace(/(https?:\/\/[^\s<]+)/g, (url) => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
