@@ -107,5 +107,49 @@ SC.Auth = (function () {
     sessionKey = null;
   }
 
-  return { hasAccount, isUnlocked, getKey, createPassphrase, login, logout };
+  // "Skip password" mode: instead of a passphrase-derived key, a random AES
+  // key is kept in localStorage next to the data it encrypts. That only
+  // obscures the data at rest - it is meant for a personal browser.
+  const NOPWD_KEY = "sc.nopwd";
+
+  function hasNoPassword() {
+    return !!localStorage.getItem(NOPWD_KEY);
+  }
+
+  async function unlockNoPassword() {
+    const raw = SC.Crypto.fromB64(localStorage.getItem(NOPWD_KEY));
+    sessionKey = await crypto.subtle.importKey("raw", raw, "AES-GCM", true, ["encrypt", "decrypt"]);
+    return true;
+  }
+
+  async function generateNoPasswordKey() {
+    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+    const b64 = SC.Crypto.toB64(await crypto.subtle.exportKey("raw", key));
+    return { key, b64 };
+  }
+
+  // Call right after the data was re-encrypted with `key`.
+  function commitNoPassword({ key, b64 }) {
+    localStorage.setItem(NOPWD_KEY, b64);
+    sessionKey = key;
+  }
+
+  // Call right after the data was re-encrypted with a passphrase key.
+  function clearNoPassword() {
+    localStorage.removeItem(NOPWD_KEY);
+  }
+
+  return {
+    hasAccount,
+    isUnlocked,
+    getKey,
+    createPassphrase,
+    login,
+    logout,
+    hasNoPassword,
+    unlockNoPassword,
+    generateNoPasswordKey,
+    commitNoPassword,
+    clearNoPassword,
+  };
 })();

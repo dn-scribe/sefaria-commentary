@@ -31,7 +31,10 @@ SC.Storage = (function () {
   }
 
   async function save(state) {
-    const key = SC.Auth.getKey();
+    return saveWithKey(state, SC.Auth.getKey());
+  }
+
+  async function saveWithKey(state, key) {
     if (!key) throw new Error("locked");
     const payload = await SC.Crypto.encryptText(key, JSON.stringify(state));
     localStorage.setItem(DATA_KEY, JSON.stringify(payload));
@@ -40,7 +43,8 @@ SC.Storage = (function () {
   function wipe() {
     localStorage.removeItem(DATA_KEY);
     localStorage.removeItem("sc.auth");
+    localStorage.removeItem("sc.nopwd");
   }
 
-  return { defaultState, load, save, wipe };
+  return { defaultState, load, save, saveWithKey, wipe };
 })();

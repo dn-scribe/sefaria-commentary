@@ -3,9 +3,14 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.13.1";
+SC.APP_VERSION = "1.14.0";
 
 SC.CHANGELOG = [
+  {
+    version: "1.14.0",
+    date: "2026-10-23",
+    changes: ["אפשרות חדשה בהגדרות: דילוג על סיסמה (למכשיר אישי) - האפליקציה נפתחת ישירות בלי מסך כניסה"],
+  },
   {
     version: "1.13.1",
     date: "2026-10-23",

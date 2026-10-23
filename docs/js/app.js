@@ -40,6 +40,11 @@ SC.App = (function () {
 
   // ---------- Auth ----------
   function initAuth() {
+    if (SC.Auth.hasNoPassword()) {
+      startNoPassword();
+      return;
+    }
+    updateLockButton();
     const mode = SC.Auth.hasAccount() ? "login" : "create";
     SC.UI.renderAuthMode(mode);
     SC.UI.showScreen("auth");
@@ -62,9 +67,22 @@ SC.App = (function () {
         }
       }
       state = await SC.Storage.load();
+      updateLockButton();
       await goToBooks();
       syncBookList();
     };
+  }
+
+  async function startNoPassword() {
+    await SC.Auth.unlockNoPassword();
+    state = await SC.Storage.load();
+    updateLockButton();
+    await goToBooks();
+    syncBookList();
+  }
+
+  function updateLockButton() {
+    $("btn-logout").hidden = SC.Auth.hasNoPassword();
   }
 
   function logout() {
@@ -1153,6 +1171,7 @@ SC.App = (function () {
     $("btn-nav-settings").onclick = () => {
       $("input-gas-url").value = state.settings.gasUrl || "";
       $("settings-status").textContent = "";
+      $("chk-skip-pwd").checked = SC.Auth.hasNoPassword();
       SC.UI.showScreen("settings");
     };
     $("btn-back-from-settings").onclick = goToBooks;
@@ -1181,6 +1200,31 @@ SC.App = (function () {
       } catch (err) {
         $("settings-status").textContent = "❌ " + (err.message || "החיבור נכשל");
       }
+    };
+
+    $("chk-skip-pwd").onchange = async (e) => {
+      const box = e.target;
+      if (box.checked) {
+        if (!confirm("האפליקציה תיפתח ללא סיסמה. מתאים רק לדפדפן אישי. להמשיך?")) {
+          box.checked = false;
+          return;
+        }
+        const pending = await SC.Auth.generateNoPasswordKey();
+        await SC.Storage.saveWithKey(state, pending.key);
+        SC.Auth.commitNoPassword(pending);
+        SC.UI.toast("הסיסמה בוטלה");
+      } else {
+        const pass = prompt("בחרו סיסמה חדשה:");
+        if (!pass) {
+          box.checked = true;
+          return;
+        }
+        await SC.Auth.createPassphrase(pass);
+        await persist();
+        SC.Auth.clearNoPassword();
+        SC.UI.toast("הסיסמה הופעלה");
+      }
+      updateLockButton();
     };
 
     $("btn-wipe").onclick = async () => {
