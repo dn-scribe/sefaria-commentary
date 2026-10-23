@@ -3,9 +3,14 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.13.0";
+SC.APP_VERSION = "1.13.1";
 
 SC.CHANGELOG = [
+  {
+    version: "1.13.1",
+    date: "2026-10-23",
+    changes: ["הדגשת **טקסט** נתמכת גם בטקסט של ספרים שהועלו"],
+  },
   {
     version: "1.13.0",
     date: "2026-10-18",
