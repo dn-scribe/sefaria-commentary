@@ -160,7 +160,7 @@ SC.UI = (function () {
         </div>
         <div class="verse-text">
           <span class="verse-num">${i + 1}</span>
-          <span class="verse-he">${escapeHtml(stripTags(line))}</span>
+          <span class="verse-he">${rawParagraphs ? mdBold(escapeHtml(stripTags(line))) : escapeHtml(stripTags(line))}</span>
           ${book.showEnglish && enLines[i] ? `<span class="verse-en muted">${escapeHtml(stripTags(enLines[i]))}</span>` : ""}
         </div>
         ${
