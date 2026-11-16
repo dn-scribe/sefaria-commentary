@@ -686,7 +686,12 @@ SC.App = (function () {
         deleteComment(row.dataset.ref);
       } else if (e.target.classList.contains("tag-chip-remove")) {
         e.target.closest(".tag-chip").remove();
-      } else if (e.target.classList.contains("btn-edit-source")) {
+      } else if (
+        e.target.classList.contains("btn-edit-source") ||
+        (e.target.classList.contains("verse-he") &&
+          row.querySelector(".btn-edit-source") &&
+          !window.getSelection().toString())
+      ) {
         enterSourceEditMode(row);
       } else if (e.target.classList.contains("btn-cancel-source")) {
         renderCurrentSectionPreservingScroll();
