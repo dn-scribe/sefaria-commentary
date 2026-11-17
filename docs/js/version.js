@@ -3,9 +3,14 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.14.1";
+SC.APP_VERSION = "1.14.2";
 
 SC.CHANGELOG = [
+  {
+    version: "1.14.2",
+    date: "2026-11-17",
+    changes: ["תיקון: כיווני החצים בכפתורי הקודם/הבא/להתחלה היו הפוכים בממשק העברי"],
+  },
   {
     version: "1.14.1",
     date: "2026-11-16",
