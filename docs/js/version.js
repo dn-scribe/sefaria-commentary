@@ -3,7 +3,7 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.16.0";
+SC.APP_VERSION = "1.16.1";
 
 // Files the offline service worker precaches (sw.js) and the "check for
 // update" button re-fetches past the HTTP cache. Add new static files here.
@@ -28,6 +28,11 @@ SC.SHELL_FILES = [
 ];
 
 SC.CHANGELOG = [
+  {
+    version: "1.16.1",
+    date: "2026-11-21",
+    changes: ["תיקון: כפתור \"להתחלה\" לא עבד ללא חיבור - תחילת הספר נשמרת כעת במכשיר גם לספרים שנוספו קודם או שקראתם עמוק בתוכם"],
+  },
   {
     version: "1.16.0",
     date: "2026-11-21",

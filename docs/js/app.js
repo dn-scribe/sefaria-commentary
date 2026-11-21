@@ -556,6 +556,7 @@ SC.App = (function () {
   const OFFLINE_REFILL = 10;
   const offlineBusy = {};
   const offlineChecked = {};
+  const offlineStartDone = {};
 
   async function ensureOfflineAhead(book, section, announce) {
     if (!book || book.source === "custom" || !section) return;
@@ -565,6 +566,17 @@ SC.App = (function () {
     offlineChecked[book.id] = key;
     offlineBusy[book.id] = true;
     try {
+      // "להתחלה" (go home) needs the book's first section offline too -
+      // independent of where the reader is. Cache-first, so cheap once done.
+      if (!offlineStartDone[book.id]) {
+        try {
+          const start = await SC.Api.getSection(book.scopeRef || book.title);
+          await SC.Api.getSection(start.firstAvailableSectionRef);
+          offlineStartDone[book.id] = true;
+        } catch (e) {
+          /* best-effort, retried on the next navigation */
+        }
+      }
       // Walk the already-cached chain after the current section.
       let ahead = 0;
       let last = section;
@@ -576,15 +588,6 @@ SC.App = (function () {
         ahead++;
       }
       if (ahead > OFFLINE_REFILL) return; // plenty cached ahead
-      // Also keep the "back to start" lookups, so that works offline.
-      if (announce) {
-        try {
-          const start = await SC.Api.getSection(book.scopeRef || book.title);
-          await SC.Api.getSection(start.firstAvailableSectionRef);
-        } catch (e) {
-          /* best-effort */
-        }
-      }
       let fetched = 0;
       while (fetched < OFFLINE_BATCH && last.next && isWithinScope(last.next, book.scopeRef)) {
         try {
