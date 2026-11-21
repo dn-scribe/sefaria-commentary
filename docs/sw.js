@@ -5,25 +5,7 @@ self.window = self; // version.js assigns onto window.SC
 importScripts("js/version.js");
 
 const CACHE = "sc-shell-" + self.SC.APP_VERSION;
-const SHELL = [
-  "./",
-  "index.html",
-  "manifest.webmanifest",
-  "css/style.css",
-  "js/vendor/docx.min.js",
-  "js/customBook.js",
-  "js/version.js",
-  "js/storage.js",
-  "js/auth.js",
-  "js/api.js",
-  "js/ui.js",
-  "js/app.js",
-  "favicon.svg",
-  "favicon.png",
-  "apple-touch-icon.png",
-  "icon-192.png",
-  "icon-512.png",
-];
+const SHELL = self.SC.SHELL_FILES;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

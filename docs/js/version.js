@@ -3,9 +3,39 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.15.0";
+SC.APP_VERSION = "1.16.0";
+
+// Files the offline service worker precaches (sw.js) and the "check for
+// update" button re-fetches past the HTTP cache. Add new static files here.
+SC.SHELL_FILES = [
+  "./",
+  "index.html",
+  "manifest.webmanifest",
+  "css/style.css",
+  "js/vendor/docx.min.js",
+  "js/customBook.js",
+  "js/version.js",
+  "js/storage.js",
+  "js/auth.js",
+  "js/api.js",
+  "js/ui.js",
+  "js/app.js",
+  "favicon.svg",
+  "favicon.png",
+  "apple-touch-icon.png",
+  "icon-192.png",
+  "icon-512.png",
+];
 
 SC.CHANGELOG = [
+  {
+    version: "1.16.0",
+    date: "2026-11-21",
+    changes: [
+      "כפתור \"בדיקת עדכון\" בהגדרות: מושך את הגרסה האחרונה מהשרת ומרענן, גם כשהדפדפן מחזיק עותק ישן",
+      "בדיקת העדכון האוטומטית של האפליקציה עוקפת כעת את מטמון הדפדפן",
+    ],
+  },
   {
     version: "1.15.0",
     date: "2026-11-21",

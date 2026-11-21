@@ -630,7 +630,7 @@ SC.App = (function () {
 
     if ("serviceWorker" in navigator) {
       const hadController = !!navigator.serviceWorker.controller;
-      navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW registration failed", e));
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch((e) => console.warn("SW registration failed", e));
       // A new version took over: tell the user, since open pages keep running old code.
       let reloaded = false;
       navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -1460,9 +1460,49 @@ SC.App = (function () {
     $("btn-export-docx").onclick = exportDocx;
   }
 
+  // Asks the server (bypassing every cache) which version is live; if it's
+  // newer, drops the service worker + its caches, re-downloads the app files
+  // past the browser's HTTP cache (GitHub Pages sends max-age=600) and reloads.
+  async function checkForUpdate() {
+    const btn = $("btn-check-update");
+    btn.disabled = true;
+    try {
+      let res;
+      try {
+        res = await fetch("js/version.js?t=" + Date.now(), { cache: "no-store" });
+      } catch (e) {
+        SC.UI.toast("אין חיבור לאינטרנט", true);
+        return;
+      }
+      const m = res.ok && /APP_VERSION\s*=\s*"([^"]+)"/.exec(await res.text());
+      if (!m) {
+        SC.UI.toast("לא ניתן לבדוק עדכון כרגע", true);
+        return;
+      }
+      if (m[1] === SC.APP_VERSION) {
+        SC.UI.toast(`הגרסה עדכנית (${SC.APP_VERSION})`);
+        return;
+      }
+      SC.UI.toast(`מעדכן לגרסה ${m[1]}...`);
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((k) => k.startsWith("sc-shell-")).map((k) => caches.delete(k)));
+      }
+      await Promise.all((SC.SHELL_FILES || []).map((u) => fetch(u, { cache: "reload" }).catch(() => null)));
+      location.reload();
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function initVersion() {
     $("header-version").textContent = "v" + SC.APP_VERSION;
     $("app-version").textContent = SC.APP_VERSION;
+    $("btn-check-update").onclick = checkForUpdate;
     $("btn-view-changelog").onclick = () => {
       SC.UI.renderChangelog(SC.CHANGELOG);
       SC.UI.showScreen("changelog");
