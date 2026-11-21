@@ -12,6 +12,12 @@ SC.Storage = (function () {
       commentary: {},
       // Tombstones for cross-device book-list sync: { bookId: deletedAtMs }
       deletedBookIds: {},
+      // Per-comment tombstones { bookId: { ref: deletedAtMs } } so a delete
+      // made on one device isn't undone by another device's older copy.
+      commentaryDeleted: {},
+      // Books whose commentary changed since the last successful Sheet sync
+      // (e.g. edits made offline): { bookId: true }.
+      pendingSheetSync: {},
     };
   }
 

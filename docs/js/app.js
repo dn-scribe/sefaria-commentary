@@ -70,6 +70,7 @@ SC.App = (function () {
       updateLockButton();
       await goToBooks();
       syncBookList();
+      flushPendingSyncs();
     };
   }
 
@@ -79,6 +80,7 @@ SC.App = (function () {
     updateLockButton();
     await goToBooks();
     syncBookList();
+    flushPendingSyncs();
   }
 
   function updateLockButton() {
@@ -265,6 +267,7 @@ SC.App = (function () {
       await goToBooks();
       SC.UI.toast(`נוסף: ${book.heTitle}`);
       scheduleBookListSync();
+      prefetchNewBook(book);
     } catch (err) {
       SC.UI.toast(err.message || "שגיאה בהוספת הספר", true);
     }
@@ -316,6 +319,7 @@ SC.App = (function () {
       await goToBooks();
       SC.UI.toast(`נוסף: ${book.heTitle} — ${book.scopeHeRef}`);
       scheduleBookListSync();
+      prefetchNewBook(book);
     } catch (err) {
       SC.UI.toast(err.message || "לא ניתן לפענח את ההפניה הזו בספריא", true);
     }
@@ -425,6 +429,8 @@ SC.App = (function () {
     }
     state.books = state.books.filter((b) => b.id !== book.id);
     delete state.commentary[book.id];
+    if (state.commentaryDeleted) delete state.commentaryDeleted[book.id];
+    if (state.pendingSheetSync) delete state.pendingSheetSync[book.id];
     state.deletedBookIds[book.id] = Date.now();
     await persist();
     await goToBooks();
@@ -468,29 +474,54 @@ SC.App = (function () {
     if (!state.settings.gasUrl || !book.sheetId) return false;
     try {
       const res = await SC.Api.getCommentary(state.settings.gasUrl, book);
-      const local = state.commentary[book.id] || {};
-      let changed = false;
-      (res.entries || []).forEach((e) => {
-        const existing = local[e.ref];
-        if (!existing || (e.updatedAt || 0) > (existing.updatedAt || 0)) {
-          local[e.ref] = {
-            title: e.title,
-            text: e.text,
-            heText: e.heText || existing?.heText || "",
-            enText: e.enText || existing?.enText || "",
-            tags: e.tags && e.tags.length ? e.tags : existing?.tags || [],
-            updatedAt: e.updatedAt,
-          };
-          changed = true;
-        }
-      });
-      state.commentary[book.id] = local;
+      const changed = mergeRemoteCommentary(book.id, res.entries || []);
       if (changed) await persist();
       return changed;
     } catch (err) {
       console.warn("Commentary pull failed", err);
       return false;
     }
+  }
+
+  // Merges the Sheet's rows into local commentary, per paragraph, newest
+  // updatedAt wins - so edits made offline on different devices combine
+  // (different paragraphs: both kept; same paragraph: the later edit wins).
+  // The Sheet has no "deleted" column, so a deletion travels as a row whose
+  // title/text/tags are all empty ("tombstone"); a newer tombstone removes
+  // the local comment, a newer edit revives it. Returns true if local changed.
+  const TOMBSTONE_TTL = 90 * 24 * 3600 * 1000;
+  function mergeRemoteCommentary(bookId, remoteEntries) {
+    const local = (state.commentary[bookId] = state.commentary[bookId] || {});
+    state.commentaryDeleted = state.commentaryDeleted || {};
+    const tombs = (state.commentaryDeleted[bookId] = state.commentaryDeleted[bookId] || {});
+    let changed = false;
+    remoteEntries.forEach((e) => {
+      const remoteTs = e.updatedAt || 0;
+      const existing = local[e.ref];
+      const localTs = Math.max(existing ? existing.updatedAt || 0 : 0, tombs[e.ref] || 0);
+      if (remoteTs <= localTs) return;
+      const isTomb = !e.title && !e.text && !(e.tags && e.tags.length);
+      if (isTomb) {
+        delete local[e.ref];
+        tombs[e.ref] = remoteTs;
+      } else {
+        local[e.ref] = {
+          title: e.title,
+          text: e.text,
+          heText: e.heText || existing?.heText || "",
+          enText: e.enText || existing?.enText || "",
+          tags: e.tags && e.tags.length ? e.tags : existing?.tags || [],
+          updatedAt: remoteTs,
+        };
+        delete tombs[e.ref];
+      }
+      changed = true;
+    });
+    const cutoff = Date.now() - TOMBSTONE_TTL;
+    Object.keys(tombs).forEach((ref) => {
+      if (tombs[ref] < cutoff) delete tombs[ref];
+    });
+    return changed;
   }
 
   function renderCurrentSection() {
@@ -512,6 +543,102 @@ SC.App = (function () {
     $("btn-open-sefaria").hidden = currentBook.source === "custom";
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
+    ensureOfflineAhead(currentBook, currentSection);
+  }
+
+  // ---------- Offline text cache ----------
+  // Sefaria text is kept on the device (IndexedDB, see api.js) so a book can
+  // be read offline. Rolling window: when fewer than OFFLINE_REFILL cached
+  // sections remain ahead of the reader, fetch the next OFFLINE_BATCH. A new
+  // book therefore gets its first 50 sections; reading on to ~the 40th pulls
+  // the next 50. Custom books carry their text in the book record already.
+  const OFFLINE_BATCH = 50;
+  const OFFLINE_REFILL = 10;
+  const offlineBusy = {};
+  const offlineChecked = {};
+
+  async function ensureOfflineAhead(book, section, announce) {
+    if (!book || book.source === "custom" || !section) return;
+    if (offlineBusy[book.id] || !navigator.onLine) return;
+    const key = section.sectionRef;
+    if (offlineChecked[book.id] === key && !announce) return;
+    offlineChecked[book.id] = key;
+    offlineBusy[book.id] = true;
+    try {
+      // Walk the already-cached chain after the current section.
+      let ahead = 0;
+      let last = section;
+      while (ahead <= OFFLINE_REFILL) {
+        if (!last.next || !isWithinScope(last.next, book.scopeRef)) return; // end of book/scope
+        const cached = await SC.Api.getCachedSection(last.next);
+        if (!cached) break;
+        last = cached;
+        ahead++;
+      }
+      if (ahead > OFFLINE_REFILL) return; // plenty cached ahead
+      // Also keep the "back to start" lookups, so that works offline.
+      if (announce) {
+        try {
+          const start = await SC.Api.getSection(book.scopeRef || book.title);
+          await SC.Api.getSection(start.firstAvailableSectionRef);
+        } catch (e) {
+          /* best-effort */
+        }
+      }
+      let fetched = 0;
+      while (fetched < OFFLINE_BATCH && last.next && isWithinScope(last.next, book.scopeRef)) {
+        try {
+          last = await SC.Api.getSection(last.next);
+        } catch (e) {
+          break; // offline/rate-limited: resume on the next navigation
+        }
+        fetched++;
+      }
+      if (fetched > 0 && announce) {
+        SC.UI.toast(`נשמרו ${fetched} קטעים לקריאה ללא חיבור לאינטרנט`);
+      }
+    } finally {
+      offlineBusy[book.id] = false;
+    }
+  }
+
+  // After adding a Sefaria book: download its first sections in the background.
+  async function prefetchNewBook(book) {
+    try {
+      const section = await SC.Api.getSection(book.currentRef);
+      ensureOfflineAhead(book, section, true);
+    } catch (e) {
+      /* best-effort */
+    }
+  }
+
+  function initOffline() {
+    const banner = $("offline-banner");
+    const update = () => (banner.hidden = navigator.onLine);
+    update();
+    window.addEventListener("offline", update);
+    window.addEventListener("online", () => {
+      update();
+      // Anything written while offline reaches the Sheet / book list now.
+      if (!state) return;
+      syncBookList();
+      flushPendingSyncs();
+      if (currentBook && $("screen-reader").classList.contains("active")) {
+        ensureOfflineAhead(currentBook, currentSection);
+      }
+    });
+
+    if ("serviceWorker" in navigator) {
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW registration failed", e));
+      // A new version took over: tell the user, since open pages keep running old code.
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!hadController || reloaded) return;
+        reloaded = true;
+        SC.UI.toast("גרסה חדשה הותקנה - רעננו את העמוד");
+      });
+    }
   }
 
   // Rebuilding #reader-content (innerHTML="" then re-appending every row)
@@ -794,6 +921,8 @@ SC.App = (function () {
     const bookId = currentBook.id;
     state.commentary[bookId] = state.commentary[bookId] || {};
     state.commentary[bookId][ref] = { ...data, updatedAt: Date.now() };
+    if (state.commentaryDeleted && state.commentaryDeleted[bookId]) delete state.commentaryDeleted[bookId][ref];
+    markSheetDirty(bookId);
     await persist();
     renderCurrentSectionPreservingScroll();
     SC.UI.toast("נשמר");
@@ -803,6 +932,9 @@ SC.App = (function () {
   async function deleteComment(ref) {
     const bookId = currentBook.id;
     if (state.commentary[bookId]) delete state.commentary[bookId][ref];
+    state.commentaryDeleted = state.commentaryDeleted || {};
+    (state.commentaryDeleted[bookId] = state.commentaryDeleted[bookId] || {})[ref] = Date.now();
+    markSheetDirty(bookId);
     await persist();
     renderCurrentSectionPreservingScroll();
     SC.UI.toast("נמחק");
@@ -836,32 +968,73 @@ SC.App = (function () {
   }
 
   // ---------- Google sync / export ----------
-  // One sync at a time per book, always sending the latest entries: two
-  // overlapping first syncs (no sheetId yet) would each create their own
-  // Sheet, leaving the linked one with only the first comment(s).
+  // One sync at a time per book: two overlapping first syncs (no sheetId yet)
+  // would each create their own Sheet. Each run first pulls and merges what
+  // other devices wrote (newest edit per paragraph wins), then pushes the
+  // merged result - the Sheet is rewritten wholesale, so pushing without
+  // pulling would erase another device's offline edits.
+  // A book stays "pending" until a sync succeeds, so edits made offline are
+  // pushed when the connection returns (even after the app was closed).
   const sheetSyncChains = {};
+  function markSheetDirty(bookId) {
+    state.pendingSheetSync = state.pendingSheetSync || {};
+    state.pendingSheetSync[bookId] = true;
+  }
+
   function syncToSheet() {
-    if (!state.settings.gasUrl) return;
-    const book = currentBook;
-    const run = () =>
-      SC.Api
-        .callGas(state.settings.gasUrl, {
+    syncBookToSheet(currentBook);
+  }
+
+  function entriesWithTombstones(bookId) {
+    const tombs = (state.commentaryDeleted && state.commentaryDeleted[bookId]) || {};
+    const rows = Object.keys(tombs).map((ref) => ({
+      ref, title: "", text: "", heText: "", enText: "", tags: [], updatedAt: tombs[ref],
+    }));
+    return sortedEntries(bookId).concat(rows);
+  }
+
+  function syncBookToSheet(book) {
+    if (!state || !book || !state.settings.gasUrl) return;
+    const run = async () => {
+      if (!state) return;
+      state.pendingSheetSync = state.pendingSheetSync || {};
+      state.pendingSheetSync[book.id] = false;
+      try {
+        if (book.sheetId && (await pullCommentary(book)) && currentBook === book) {
+          renderCurrentSectionPreservingScroll();
+        }
+        const res = await SC.Api.callGas(state.settings.gasUrl, {
           action: "sync",
           book: bookRef(book),
-          entries: sortedEntries(book.id),
-        })
-        .then((res) => {
-          if (res.sheetId && !book.sheetId) {
-            book.sheetId = res.sheetId;
-            book.sheetUrl = res.sheetUrl;
-            book.updatedAt = Date.now();
-            persist();
-            if (currentBook === book) updateExportLink();
-            scheduleBookListSync();
-          }
-        })
-        .catch((err) => console.warn("Sheet sync failed", err));
+          entries: entriesWithTombstones(book.id),
+        });
+        if (res.sheetId && !book.sheetId) {
+          book.sheetId = res.sheetId;
+          book.sheetUrl = res.sheetUrl;
+          book.updatedAt = Date.now();
+          if (currentBook === book) updateExportLink();
+          scheduleBookListSync();
+        }
+        await persist();
+      } catch (err) {
+        console.warn("Sheet sync failed", err);
+        if (state) {
+          state.pendingSheetSync[book.id] = true;
+          persist().catch(() => {});
+        }
+      }
+    };
     sheetSyncChains[book.id] = (sheetSyncChains[book.id] || Promise.resolve()).then(run);
+  }
+
+  function flushPendingSyncs() {
+    if (!state || !state.settings.gasUrl || !navigator.onLine) return;
+    Object.keys(state.pendingSheetSync || {}).forEach((id) => {
+      if (!state.pendingSheetSync[id]) return;
+      const book = state.books.find((b) => b.id === id);
+      if (book) syncBookToSheet(book);
+      else delete state.pendingSheetSync[id];
+    });
   }
 
   // ---------- Book list sync (cross-device) ----------
@@ -927,6 +1100,10 @@ SC.App = (function () {
       LINK_KEYS.forEach((k) => {
         if (!b[k] && other[k]) b[k] = other[k];
       });
+      // Tags only ever get added, so combine instead of letting the winning
+      // side's list replace the other's (two devices adding tags offline).
+      const tags = Array.from(new Set([...(b.tags || []), ...(other.tags || [])]));
+      if (tags.length !== (b.tags || []).length) b.tags = tags;
     });
 
     state.books = finalBooks;
@@ -1300,6 +1477,7 @@ SC.App = (function () {
     initSettings();
     initHeader();
     initVersion();
+    initOffline();
   }
 
   return { init };
