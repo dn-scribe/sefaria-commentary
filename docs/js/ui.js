@@ -81,6 +81,14 @@ SC.UI = (function () {
         <div class="book-info">
           <strong>${escapeHtml(book.heTitle || book.title)}${book.scopeHeRef ? " — " + escapeHtml(book.scopeHeRef) : ""}${book.source === "custom" ? ' <span class="local-badge">מקומי</span>' : ""}</strong>
           <span class="muted">${escapeHtml(book.currentHeRef || book.currentRef || "")}</span>
+          <div class="offline-box" data-book-id="${escapeAttr(book.id)}">
+            <span class="offline-text"></span>
+            <span class="offline-actions">
+              <button type="button" class="link-btn btn-dl-batch">⬇ הורדת 50 הבאים</button>
+              <button type="button" class="link-btn btn-dl-full">⬇ הורדת הספר כולו</button>
+              <button type="button" class="link-btn btn-dl-stop" hidden>עצירה</button>
+            </span>
+          </div>
         </div>
         <div class="book-actions">
           <button class="secondary btn-open">פתיחה</button>

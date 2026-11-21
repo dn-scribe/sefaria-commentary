@@ -110,6 +110,7 @@ SC.App = (function () {
       bookListTab,
       state.books.length
     );
+    refreshAllOfflineUi();
   }
 
   async function toggleArchiveBook(book) {
@@ -544,6 +545,8 @@ SC.App = (function () {
     $("btn-open-sefaria").onclick = () => window.open(SC.Api.sefariaUrl(currentSection.ref), "_blank");
     updateExportLink();
     ensureOfflineAhead(currentBook, currentSection);
+    $("reader-offline").dataset.bookId = currentBook.id;
+    updateOfflineBox($("reader-offline"), currentBook);
   }
 
   // ---------- Offline text cache ----------
@@ -602,7 +605,124 @@ SC.App = (function () {
       }
     } finally {
       offlineBusy[book.id] = false;
+      refreshOfflineUi(book);
     }
+  }
+
+  // ---------- Offline status + manual download ----------
+  // Status is derived from what is actually in the text cache, walking the
+  // next/prev chain from the book's current section.
+  const STATUS_WALK_CAP = 3000;
+  const downloading = {}; // bookId -> { count, stop }
+
+  async function offlineStatus(book) {
+    if (book.source === "custom") return { custom: true };
+    const cur = await SC.Api.getCachedSection(book.currentRef || book.title);
+    if (!cur) return { cached: false };
+    async function walk(dir) {
+      let n = 0;
+      let s = cur;
+      while (n < STATUS_WALK_CAP) {
+        if (!s[dir] || !isWithinScope(s[dir], book.scopeRef)) return { n, reached: true };
+        const c = await SC.Api.getCachedSection(s[dir]);
+        if (!c) return { n, reached: false };
+        s = c;
+        n++;
+      }
+      return { n, reached: false };
+    }
+    const f = await walk("next");
+    const b = await walk("prev");
+    return { cached: true, ahead: f.n, toEnd: f.reached, behind: b.n, toStart: b.reached, full: f.reached && b.reached };
+  }
+
+  function offlineStatusText(st, dl) {
+    if (dl) return `מוריד... ${dl.count} קטעים הורדו`;
+    if (st.custom) return "ספר מקומי - כל הטקסט שמור במכשיר";
+    if (!st.cached) return "לא הורד לשימוש ללא חיבור";
+    if (st.full) return "✔ הספר כולו הורד";
+    let t;
+    if (st.toEnd) t = `✔ הורד עד סוף הספר (${st.ahead} קטעים קדימה)`;
+    else if (st.ahead > 0) t = `הורדו ${st.ahead} קטעים קדימה`;
+    else t = "הורד רק הקטע הנוכחי";
+    if (st.behind > 0 && !st.toStart) t += ` · ${st.behind} אחורה`;
+    return t;
+  }
+
+  async function updateOfflineBox(box, book) {
+    if (!box || !book) return;
+    const dl = downloading[book.id];
+    const st = await offlineStatus(book);
+    if (box.dataset.bookId !== book.id) return; // box was reused for another book meanwhile
+    box.querySelector(".offline-text").textContent = offlineStatusText(st, dl);
+    const canDl = !st.custom && !st.full && !dl;
+    const batch = box.querySelector(".btn-dl-batch");
+    const full = box.querySelector(".btn-dl-full");
+    batch.hidden = !canDl || !!st.toEnd;
+    full.hidden = !canDl;
+    batch.disabled = full.disabled = !navigator.onLine;
+    box.querySelector(".btn-dl-stop").hidden = !dl;
+  }
+
+  function refreshOfflineUi(book) {
+    if (!book) return;
+    document.querySelectorAll(".offline-box").forEach((box) => {
+      if (box.dataset.bookId === book.id) updateOfflineBox(box, book);
+    });
+  }
+
+  function refreshAllOfflineUi() {
+    document.querySelectorAll(".offline-box").forEach((box) => {
+      const book = state && state.books.find((b) => b.id === box.dataset.bookId);
+      if (book) updateOfflineBox(box, book);
+    });
+  }
+
+  // mode "batch": the next OFFLINE_BATCH sections not yet on the device;
+  // "full": everything from the current section to the end, then back to the start.
+  async function downloadOffline(book, mode) {
+    if (!book || book.source === "custom") return;
+    if (downloading[book.id] || offlineBusy[book.id]) {
+      SC.UI.toast("הורדה כבר מתבצעת");
+      return;
+    }
+    if (!navigator.onLine) {
+      SC.UI.toast("אין חיבור לאינטרנט", true);
+      return;
+    }
+    const dl = { count: 0, stop: false };
+    downloading[book.id] = dl;
+    offlineBusy[book.id] = true;
+    refreshOfflineUi(book);
+    let error = null;
+    async function walk(from, dir, limit) {
+      let s = from;
+      let fetched = 0;
+      while (s[dir] && isWithinScope(s[dir], book.scopeRef) && !dl.stop) {
+        const had = await SC.Api.getCachedSection(s[dir]);
+        if (!had && fetched >= limit) break;
+        s = had || (await SC.Api.getSection(s[dir]));
+        if (!had) {
+          fetched++;
+          dl.count++;
+          if (dl.count % 5 === 0) refreshOfflineUi(book);
+        }
+      }
+    }
+    try {
+      const cur = await SC.Api.getSection(book.currentRef || book.title);
+      await walk(cur, "next", mode === "full" ? Infinity : OFFLINE_BATCH);
+      if (mode === "full") await walk(cur, "prev", Infinity);
+    } catch (e) {
+      error = e;
+    } finally {
+      delete downloading[book.id];
+      offlineBusy[book.id] = false;
+      refreshOfflineUi(book);
+    }
+    if (error) SC.UI.toast(error.message || "ההורדה נכשלה", true);
+    else if (dl.stop) SC.UI.toast(`ההורדה נעצרה (${dl.count} קטעים)`);
+    else SC.UI.toast(dl.count ? `הורדה הסתיימה: ${dl.count} קטעים` : "הכול כבר הורד");
   }
 
   // After adding a Sefaria book: download its first sections in the background.
@@ -617,9 +737,22 @@ SC.App = (function () {
 
   function initOffline() {
     const banner = $("offline-banner");
-    const update = () => (banner.hidden = navigator.onLine);
+    const update = () => {
+      banner.hidden = navigator.onLine;
+      refreshAllOfflineUi();
+    };
     update();
     window.addEventListener("offline", update);
+
+    document.addEventListener("click", (e) => {
+      const box = e.target.closest && e.target.closest(".offline-box");
+      if (!box || !state) return;
+      const book = state.books.find((b) => b.id === box.dataset.bookId);
+      if (!book) return;
+      if (e.target.classList.contains("btn-dl-batch")) downloadOffline(book, "batch");
+      else if (e.target.classList.contains("btn-dl-full")) downloadOffline(book, "full");
+      else if (e.target.classList.contains("btn-dl-stop") && downloading[book.id]) downloading[book.id].stop = true;
+    });
     window.addEventListener("online", () => {
       update();
       // Anything written while offline reaches the Sheet / book list now.

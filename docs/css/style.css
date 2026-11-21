@@ -57,6 +57,25 @@ body {
   text-align: center;
 }
 
+.offline-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+#reader-offline {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.offline-actions { display: inline-flex; gap: 0.8rem; flex-wrap: wrap; }
+.offline-box .link-btn { font-size: 0.82rem; }
+.offline-box .link-btn:disabled { opacity: 0.4; }
+
 .icon-btn {
   background: none;
   border: 1px solid var(--border);
