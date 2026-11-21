@@ -48,6 +48,15 @@ body {
 .changelog-entry li { margin-bottom: 0.25rem; }
 .header-actions { display: flex; gap: 0.4rem; }
 
+.offline-banner {
+  background: #fff4d6;
+  color: #6b4e00;
+  border-bottom: 1px solid #ead9a0;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .icon-btn {
   background: none;
   border: 1px solid var(--border);

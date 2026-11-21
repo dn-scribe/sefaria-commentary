@@ -4,16 +4,74 @@ window.SC = window.SC || {};
 SC.Api = (function () {
   const BASE = "https://www.sefaria.org";
 
+  // fetch() rejects with a bare TypeError when offline - give it a message
+  // the UI can show as-is.
+  async function net(url, opts) {
+    try {
+      return await fetch(url, opts);
+    } catch (e) {
+      throw new Error("אין חיבור לאינטרנט");
+    }
+  }
+
+  // Sefaria sections are immutable enough to keep forever on the device so
+  // already-read (or prefetched) text opens offline. IndexedDB, not
+  // localStorage: the latter is small and already holds the encrypted
+  // app state. Keyed by the ref string used to request it.
+  const DB_NAME = "sc-text";
+  const STORE = "sections";
+  let dbPromise = null;
+  function openDb() {
+    if (!dbPromise) {
+      dbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error("no indexedDB"));
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      dbPromise.catch(() => {});
+    }
+    return dbPromise;
+  }
+  async function cacheGet(ref) {
+    try {
+      const db = await openDb();
+      return await new Promise((resolve) => {
+        const r = db.transaction(STORE).objectStore(STORE).get(ref);
+        r.onsuccess = () => resolve(r.result || null);
+        r.onerror = () => resolve(null);
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+  async function cachePut(refs, section) {
+    try {
+      const db = await openDb();
+      await new Promise((resolve) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const store = tx.objectStore(STORE);
+        new Set(refs).forEach((r) => r && store.put(section, r));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
+      });
+    } catch (e) {
+      /* cache is best-effort */
+    }
+  }
+
   async function searchTitles(query) {
     if (!query || query.trim().length < 2) return [];
-    const res = await fetch(`${BASE}/api/name/${encodeURIComponent(query.trim())}`);
+    const res = await net(`${BASE}/api/name/${encodeURIComponent(query.trim())}`);
     if (!res.ok) throw new Error("Sefaria search failed");
     const json = await res.json();
     return (json.completions || []).slice(0, 12);
   }
 
   async function getIndex(title) {
-    const res = await fetch(`${BASE}/api/index/${encodeURIComponent(title)}`);
+    const res = await net(`${BASE}/api/index/${encodeURIComponent(title)}`);
     if (!res.ok) throw new Error("Book not found on Sefaria");
     const json = await res.json();
     const bookTitle = json.title || title;
@@ -47,7 +105,7 @@ SC.Api = (function () {
   }
 
   async function getFirstSectionRef(title) {
-    const res = await fetch(
+    const res = await net(
       `${BASE}/api/texts/${encodeURIComponent(title)}?context=0&pad=0&commentary=0`
     );
     if (!res.ok) return title;
@@ -55,13 +113,17 @@ SC.Api = (function () {
     return json.firstAvailableSectionRef || json.sectionRef || title;
   }
 
+  // Cache-first: a section already on the device is returned without any
+  // network call (so reading works offline and is instant).
   async function getSection(ref) {
-    const res = await fetch(
+    const cached = await cacheGet(ref);
+    if (cached) return cached;
+    const res = await net(
       `${BASE}/api/texts/${encodeURIComponent(ref)}?context=0&pad=0&commentary=0`
     );
     if (!res.ok) throw new Error("Failed to load text from Sefaria");
     const json = await res.json();
-    return {
+    const section = {
       ref: json.ref,
       heRef: json.heRef || json.ref,
       sectionRef: json.sectionRef || json.ref,
@@ -75,6 +137,10 @@ SC.Api = (function () {
       text: normalizeLines(json.text),
       book: json.book || json.indexTitle,
     };
+    // Container refs (empty text, only a firstAvailableSectionRef) are kept
+    // too - "back to start" looks one up before drilling down.
+    await cachePut([ref, section.sectionRef], section);
+    return section;
   }
 
   // Sefaria sometimes nests arrays (e.g. Talmud); flatten one level to plain strings.
@@ -91,7 +157,7 @@ SC.Api = (function () {
   // alt-structures (e.g. a Likutei Moharan "Part II") need their own query
   // by that part's own ref (which this same endpoint also accepts).
   async function getShape(title) {
-    const res = await fetch(`${BASE}/api/shape/${encodeURIComponent(title)}`);
+    const res = await net(`${BASE}/api/shape/${encodeURIComponent(title)}`);
     if (!res.ok) throw new Error("שגיאה בטעינת מבנה הפרקים");
     const json = await res.json();
     const item = Array.isArray(json) ? json[0] : json;
@@ -106,7 +172,7 @@ SC.Api = (function () {
   // Apps Script web apps choke on CORS preflight for JSON content-type,
   // so we send text/plain and parse JSON manually server-side.
   async function callGas(gasUrl, payload) {
-    const res = await fetch(gasUrl, {
+    const res = await net(gasUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
@@ -133,6 +199,7 @@ SC.Api = (function () {
     searchTitles,
     getIndex,
     getSection,
+    getCachedSection: cacheGet,
     getShape,
     sefariaUrl,
     callGas,
