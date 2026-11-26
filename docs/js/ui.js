@@ -10,7 +10,10 @@ SC.UI = (function () {
     document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
     $(`screen-${name}`).classList.add("active");
     $("app-header").hidden = name === "auth";
+    if (name !== "reader") $("app-title-text").textContent = DEFAULT_TITLE;
   }
+
+  const DEFAULT_TITLE = "📖 פרשנות";
 
   let toastTimer = null;
   function toast(msg, isError) {
@@ -110,8 +113,8 @@ SC.UI = (function () {
 
   function renderReader(book, section, commentaryMap, extraSections) {
     extraSections = extraSections || [];
-    $("reader-book-title").textContent = book.heTitle || book.title;
-    $("reader-section-title").textContent = section.heRef || section.sectionRef;
+    $("app-title-text").textContent =
+      (book.heTitle || book.title) + " — " + (section.heRef || section.sectionRef);
 
     const lines = section.he.length ? section.he : section.text;
     const enLines = section.text;
