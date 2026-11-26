@@ -37,6 +37,12 @@ did *not* happen) in any summary of a change.
 - Verify UI/behavior changes live in a browser (e.g. a local
   `python3 -m http.server` against `docs/`) before calling a task done -
   don't rely on reading the code alone.
+- Every change to the deployed app (anything under `docs/`) must bump
+  `SC.APP_VERSION` in `docs/js/version.js` (minor for new capabilities,
+  patch for fixes/tweaks) and add a matching `SC.CHANGELOG` entry, in the
+  same PR. The version is the service-worker cache key, so without the
+  bump installed copies of the app never pick up the change. New static
+  files also go in `SC.SHELL_FILES`.
 - One PR per feature/fix, via `gh pr create` / `gh pr merge`.
 - State plainly, after each change, whether `gas/**` was touched and
   therefore whether the deploy-gas workflow will fire.
