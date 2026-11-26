@@ -3,7 +3,7 @@
 // for fixes) - shown on the "מה חדש?" screen in Settings.
 window.SC = window.SC || {};
 
-SC.APP_VERSION = "1.17.0";
+SC.APP_VERSION = "1.17.1";
 
 // Files the offline service worker precaches (sw.js) and the "check for
 // update" button re-fetches past the HTTP cache. Add new static files here.
@@ -28,6 +28,11 @@ SC.SHELL_FILES = [
 ];
 
 SC.CHANGELOG = [
+  {
+    version: "1.17.1",
+    date: "2026-11-26",
+    changes: ["שם הספר והפרק מוצגים כעת בכותרת האפליקציה בעמוד הקריאה"],
+  },
   {
     version: "1.17.0",
     date: "2026-11-21",
